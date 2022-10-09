@@ -1,0 +1,19 @@
+bitmap TAttrs [
+  c       0x10        \ code
+  i       0x20        \ italic
+  b       0x40        \ bold
+  strike  0x80        \ strikethrough
+]
+
+bitmap CAttrs [
+\ name    var   msk
+  noh     0x00  0x03
+  h1      0x01  0x03
+  h2      0x02  0x03
+  h3      0x03  0x03
+]
+
+struct Text [
+  body: Str
+  tAttrs: TAttrs
+]
