@@ -138,9 +138,9 @@ Lists:
  * `[1]` numbered list
  * `[  1]` indented numbered list
  * `[ ]` unchecked box
- * `[   ]` indented unchecked box
+ * `[   ]` indented unchecked box (note: this renders incorrectly on github)
  * `[X]` checked box (also `[x]`)
- * `[  X]` indented unchecked box
+ * `[  X]` indented unchecked box (note: this renders incorrectly on github)
  * `[list]` for explicit list
 
 Linking
@@ -156,6 +156,7 @@ Attributes are added in `attr=foo` form:
  * mark: attribute which creates a mark that can be linked `[l]` to.
  * ref: using `ref=http://website.com` will cause the block to render a link.
  * title: adds title text.
+ * l: link attribute, works same as `[l]` but adds to another block.
  * otherwise it is a "custom" attribute, some tools process these (i.e. `lang`
    for code, etc)
 
