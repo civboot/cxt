@@ -43,7 +43,7 @@ def reprArr(arr: list):
   return '[' + ', '.join(out) + ']'
 
 @dataclass
-class ZoaRaw(object):
+class ZoaRaw:
   data: bytearray
   arr: list["ZoaRaw"]
 
@@ -168,6 +168,16 @@ def from_zoab(br: io.BytesIO, joinTo:ZoaRaw = None):
       return out
     prev_ty = ty
 
+@dataclass
+class Undefined:
+  """Undefined type."""
+  name: str
+
+def updateUndefined(prevTy, newTyName, newTy):
+  if not isinstance(prevTy, Undefined): return prevTy
+  if newTy == prevTy:                    return prevTy
+  if newTyName == prevTy.name:           return newTy
+  else:                                  return prevTy
 
 def intBytesLen(v: int) -> int:
   if v <= 0xFF:       return 1
@@ -219,11 +229,6 @@ class Str(str):
   def toZ(self) -> ZoaRaw: return ZoaRaw.new_data(self.encode('utf-8'))
   def toPy(self) -> 'Str': return self
 
-@dataclass
-class StructField:
-  ty: Any
-  zid: int = None
-
 class ArrBase(list):
   @classmethod
   def frPy(cls, l: Iterable[Any]): return cls([cls._ty.frPy(i) for i in l])
@@ -232,6 +237,10 @@ class ArrBase(list):
   def toZ(self) -> ZoaRaw: return ZoaRaw.new_arr([v.toZ() for v in self])
   def toPy(self) -> list: return [v.toPy() for v in self]
   def __repr__(self): return reprArr(self)
+
+  @classmethod
+  def _define(cls, name, ty):
+    cls._ty = updateUndefined(cls._ty, name, ty)
 
 ArrStr  = type('ArrStr', (ArrBase,),  {'_ty': Str,  'name': 'ArrStr'})
 ArrData = type('ArrData', (ArrBase,), {'_ty': Data, 'name': 'ArrData'})
@@ -264,19 +273,32 @@ class MapBase(odict):
   def toPy(self) -> odict: return odict((k.toPy(), v.toPy()) for k, v in self.items())
   def __repr__(self): return repr(self.toPy())
 
+  @classmethod
+  def _define(cls, name, ty):
+    cls._vty = updateUndefined(cls._vty, name, ty)
+    cls._kty = updateUndefined(cls._kty, name, ty)
+
+@dataclass
+class StructField:
+  ty: Any
+  zid: int = None
+
+  def _define(self, name, ty):
+    self.ty = updateUndefined(self.ty, name, ty)
+
 @dataclass(init=False)
 class StructBase:
   @classmethod
   def frZ(cls, z: ZoaRaw):
     args = []
     posArgs = Int.frZ(z.arr[0]) # number of positional args
-    fields = iter(cls._fields)
+    fields = iter(cls._fields.items())
     for pos in range(posArgs):
       _name, f = next(fields)
       assert f.zid is None
       args.append(f.ty.frZ(z.arr[1 + pos]))
     kwargs = {}
-    byId = {f.zid: (name, f.ty) for name, f in cls._fields}
+    byId = {f.zid: (name, f.ty) for name, f in cls._fields.items()}
     for z in z.arr[1+posArgs:]:
       name, ty = byId[Int.frZ(zi[0])]
       kwargs[name] = ty.frZ(zi[1])
@@ -285,7 +307,7 @@ class StructBase:
   def toZ(self) -> ZoaRaw:
     # find how many positional args exist
     posArgs = 0; posArgsDone = False
-    for name, f in self._fields:
+    for name, f in self._fields.items():
       if f.zid is None: # positional arg
         if getattr(self, name.decode('utf-8')) is None: posArgsDone = True
         elif posArgsDone: raise ValueError(
@@ -293,29 +315,42 @@ class StructBase:
         else: posArgs += 1
 
     out = [Int(posArgs).toZ()] # starts with number of positional arguments
-    for name, f in self._fields:
+    for name, f in self._fields.items():
       if f.zid is None: out.append(getattr(self, name.decode('utf-8')).toZ())
       else: out.append(ZoaRaw.new_arr([f.zid, self.get(name).toZ()]))
     return ZoaRaw.new_arr(out)
 
   def toPy(self) -> dict:
     out = {}
-    for name, f in self._fields:
+    for name, f in self._fields.items():
       name = name.decode('utf-8')
       out[name] = getattr(self, name).toPy()
     return out
+
+  @classmethod
+  def _define(cls, name, ty):
+    for f in cls._fields.values():
+      f._define(name, ty)
+
+@dataclass
+class EnumVar:
+  ty: Any
+
+  def _define(self, name, ty):
+    self.ty = updateUndefined(self.ty, name, ty)
 
 @dataclass(init=False)
 class EnumBase:
   @classmethod
   def frZ(cls, z: ZoaRaw) -> 'EnumBase':
     variant = Int.frZ(z.arr[0])
-    name, ty = cls._variants[variant]
-    return cls(**{name.decode('utf-8'): ty.frZ(z.arr[1])})
+    name, var = cls._variants[variant]
+    return cls(**{name.decode('utf-8'): var.ty.frZ(z.arr[1])})
 
   def toZ(self) -> ZoaRaw:
     variant, value = None, None
-    for i, (n, ty) in enumerate(self._variants):
+    for i, (n, v) in enumerate(self._variants):
+      ty = v.ty
       v = getattr(self, n.decode('utf-8'))
       if v:
         if variant is not None: raise ValueError(
@@ -325,6 +360,11 @@ class EnumBase:
     return ZoaRaw.new_arr([Int(variant).toZ(), value.toZ()])
 
   def toPy(self) -> Enum: return self
+
+  @classmethod
+  def _define(cls, name, ty):
+    for _n, v in cls._variants:
+      v._define(name, ty)
 
 @dataclass
 class BmVar: # Bitmap Variant
@@ -449,20 +489,21 @@ dynFrZMethod[DynType.MapData] = MapDataDyn.frZ
 
 def _frPyArrDyn(cls, arr): return cls._arrDyn(ArrDyn.frPy(arr))
 
-
 def modname(mod, name): return mod + '.' + name if mod else name
 
 class TyEnv:
   def __init__(self):
     self.tys = {
-        b'Str': Str,
-        b'Data': Data,
-        b'Int': Int,
-        b'Dyn': Dyn,
-        b'ArrDyn': ArrDyn,
-        b'ArrStr': ArrStr,
-        b'ArrData': ArrData,
-        b'ArrInt': ArrInt,
+      b'Str': Str,
+      b'Data': Data,
+      b'Int': Int,
+      b'Dyn': Dyn,
+      b'ArrDyn': ArrDyn,
+      b'ArrStr': ArrStr,
+      b'ArrData': ArrData,
+      b'ArrInt': ArrInt,
+      b'MapStrDyn': MapStrDyn,
+      b'MapDataDyn': MapDataDyn,
     }
 
   def arr(self, ty: Any) -> ArrBase:
@@ -483,22 +524,33 @@ class TyEnv:
     self.tys[name] = mapTy
     return mapTy
 
-  def struct(self, mod: bytes, name: bytes, fields: List[Tuple[bytes, StructField]]):
+  def undefined(self, name):
+    existing = self.tys.get(name)
+    if existing: raise ValueError(f"Declaring already defined type: {name}")
+    if existing: return existing
+    ty = Undefined(name)
+    self.tys[name] = ty
+    return ty
+
+  def struct(self, mod: bytes, name: bytes, fields: Dict[bytes, StructField]):
     mn = modname(mod, name)
-    if mn in self.tys: raise KeyError(f"Modname {mn} already exists")
+    undefined = self.tys.get(mn)
+    if isinstance(undefined, Undefined): pass
+    elif mn in self.tys: raise KeyError(f"Modname {mn} already exists")
     ty = dataclasses.make_dataclass(
       name.decode('utf-8'),
-      [(n.decode('utf-8'), f.ty) for (n, f) in fields],
+      [(n.decode('utf-8'), f.ty) for (n, f) in fields.items()],
       bases=(StructBase,),
     )
     ty.name = mn
     ty._fields = fields
-    self.tys[mn] = ty
-    return ty
+    return self._register(mn, ty, undefined)
 
   def enum(self, mod: bytes, name: bytes, variants: List[Tuple[bytes, Any]]):
     mn = modname(mod, name)
-    if mn in self.tys: raise KeyError(f"Modname {mn} already exists")
+    undefined = self.tys.get(mn)
+    if isinstance(undefined, Undefined): pass
+    elif mn in self.tys: raise KeyError(f"Modname {mn} already exists")
     ty = dataclasses.make_dataclass(
       name.decode('utf-8'),
       [
@@ -509,8 +561,7 @@ class TyEnv:
     )
     ty.name = mn
     ty._variants = variants
-    self.tys[mn] = ty
-    return ty
+    return self._register(mn, ty, undefined)
 
   def bitmap(self, mod: bytes, name: bytes, variants: List[Tuple[bytes, BmVar]]):
     mn = modname(mod, name)
@@ -524,6 +575,16 @@ class TyEnv:
     ty = type(name.decode('utf-8'), (BitmapBase,), methods)
     self.tys[mn] = ty
     return ty
+
+  def _register(self, name, ty, undefined):
+    self.tys[name] = ty
+    if undefined: self._define(name, ty)
+    return ty
+
+  def _define(self, name, ty):
+    for v in self.tys.values():
+      if hasattr(v, '_define'):
+        v._define(name, ty)
 
 SINGLES = {ord(c) for c in ['%', '\\', '$', '|', '(', ')', '[', ']']}
 
@@ -554,25 +615,36 @@ def coaleseTG(group: TG) -> TG:
     return TG.T_ALPHA
   return group
 
+
 class ParseError(RuntimeError):
   def __init__(self, line, msg): return super().__init__(f'line {line}: {msg}')
 
+
 @dataclass
-class Parser:
+class BaseParser:
   buf: bytearray
-  env: TyEnv = dataclasses.field(default_factory=TyEnv)
   mod: bytes = None
   i: int = 0
   line: int = 1
 
+  # These are used by non-zoa parsers which depend on this to determine
+  # whitespace behavior.
+  skippedLines: int = 0
+  skippedSpaces: int = 0
+
   def error(self, msg): raise ParseError(self.line, msg)
 
-  def trackLine(self):
-      if self.buf[self.i] == ord('\n'): self.line += 1
+
+@dataclass
+class Parser(BaseParser):
+  env: TyEnv = dataclasses.field(default_factory=TyEnv)
 
   def skipWhitespace(self):
     while self.i < len(self.buf) and TG.fromChr(self.buf[self.i]) is TG.T_WHITE:
-      self.trackLine()
+      if self.buf[self.i] == ord('\n'):
+        self.line += 1
+        self.skippedLines += 1
+      else: self.skippedSpaces += 1
       self.i += 1
 
   def _token(self) -> bytes:
@@ -588,25 +660,6 @@ class Parser:
         return self.buf[starti:self.i]
       self.i += 1
     return self.buf[starti: self.i]
-
-  def _blockComment(self):
-    while self.i < len(self.buf):
-      if self.buf[self.i:self.i+1] == b'\\(':
-        self.i += 2
-        self._blockComment()
-      if self.buf[self.i] == ord(')'):
-        return
-      self.i += 1
-
-  def parseComment(self):
-    if self.buf[self.i] == ord('('): # block comment
-      self.i += 1
-      self._blockComment()
-    elif self.buf[self.i] == ord(' '): # comment till EOL
-      while self.i < len(self.buf) and self.buf[self.i] != ord('\n'):
-        self.i += 1
-    else: # ignore token
-      self._token()
 
   def token(self):
     while self.i < len(self.buf):
@@ -625,6 +678,24 @@ class Parser:
 
   def sugar(self, s):
     if self.peek() == s.encode('utf-8'): self.token() # consume token
+  def _blockComment(self):
+    while self.i < len(self.buf):
+      if self.buf[self.i:self.i+1] == b'\\(':
+        self.i += 2
+        self._blockComment()
+      if self.buf[self.i] == ord(')'):
+        return
+      self.i += 1
+
+  def parseComment(self):
+    if self.buf[self.i] == ord('('): # block comment
+      self.i += 1
+      self._blockComment()
+    elif self.buf[self.i] == ord(' '): # comment till EOL
+      while self.i < len(self.buf) and self.buf[self.i] != ord('\n'):
+        self.i += 1
+    else: # ignore token
+      self._token()
 
   def parseArr(self) -> ArrBase:
     self.need('['); ty = self.parseTy(); self.need(']')
@@ -651,14 +722,16 @@ class Parser:
 
   def _parseStruct(self) -> (str, List[StructField]):
     name = self.token()
-    fields = []
+    fields = odict()
     self.need('[')
     while True:
       p = self.peek()
       if p == b']':
         self.need(']')
         break
-      fields.append(self.parseField())
+      k, v = self.parseField()
+      if k in fields: raise ValueError(f'field {k} listed twice')
+      fields[k] = v
       self.sugar(';')
     return name, fields
 
@@ -668,6 +741,9 @@ class Parser:
     if t.startswith(b'0x'): return int(t[2:], 16)
     return int(t, 10)
 
+  def parseDeclare(self) -> Undefined:
+    return self.env.undefined(self.token())
+
   def parseStruct(self) -> StructBase:
     name, fields = self._parseStruct()
     return self.env.struct(self.mod, name, fields)
@@ -675,7 +751,7 @@ class Parser:
   def parseEnum(self) -> EnumBase:
     name, fields = self._parseStruct()
     # TODO: handle zid
-    return self.env.enum(self.mod, name, [(n, f.ty) for (n, f) in fields])
+    return self.env.enum(self.mod, name, [(n, EnumVar(f.ty)) for (n, f) in fields.items()])
 
   def parseBitmap(self) -> BitmapBase:
     name = self.token()
@@ -702,6 +778,7 @@ class Parser:
     while self.i < len(self.buf):
       token = self.token()
       if not token: break
-      if token == b'struct': self.parseStruct()
-      if token == b'enum': self.parseEnum()
-      if token == b'bitmap': self.parseBitmap()
+      elif token == b'declare': self.parseDeclare()
+      elif token == b'struct':  self.parseStruct()
+      elif token == b'enum':    self.parseEnum()
+      elif token == b'bitmap':  self.parseBitmap()
