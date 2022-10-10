@@ -20,6 +20,13 @@ CivText enables (for example) writing a command line utility's documentation as
 a `.ct` file, parsing it and exporting it into a structed data format (aka json)
 and injesting that to generate code for the args structure of a program.
 
+**This repository is WIP**. Current progress:
+  - [X] parsing text
+  - [X] parsing code
+  - [ ] parsing lists
+  - [ ] export above to html
+  - [ ] parsing tables
+
 [BBCode]: https://en.wikipedia.org/wiki/BBCode
 [Civboot]: https://civboot.org
 
@@ -28,7 +35,7 @@ and injesting that to generate code for the args structure of a program.
 This sentance has [b]bold[b] text, [i]italic[i] text, and
 [b][i]bold italic[i][b] text.
 
-[:]this is code[:], `this is also code`.
+[#]this is code[#], `this is also code`.
 
 A url to [t ref=http://civboot.org]CivBoot[t], or displaying and linking the
 full url: [url]http://civboot.org[url]
@@ -41,25 +48,31 @@ directory.
 
 A link to myMark would look like: [l]myMark[l]
 
-Lists:
- [*] bullet point
- [*] second bullet point
+Lists: [+]
+ * bullet point
+ * second bullet point
+[/]
 
-Numbered Lists:
- [1] first item
- [2] second item
+Numbered Lists: [+]
+ 1. first item
+ 2. second item
+[/]
 
-Indented lists
- [*] Bullet point
- [  *] sub bullet point
- [*] second bullet point
- [*] third bullet point
+Indented lists [+]
+ * Bullet point [+]
+   * sub bullet point
+ [/]
+ * second bullet point
+ * third bullet point
+[/]
 
-Checkboxes:
+Checkboxes: [+]
  [X] done item
- [ ] undone item
- [  X] indended done item
- [   ] indended undone item
+ [ ] undone item [+]
+   [X] indended done item
+   [ ] indended undone item
+ [/]
+[/]
 ```
 
 ## Special Character Escapes
@@ -77,8 +90,6 @@ Code blocks use `[#...]`
 This is a code
 block.
    It can have multiple lines and whitespace.
-
-It must not be inside of text.
 [#]
 
 [###]
@@ -93,12 +104,12 @@ Three #'s in brackets end the code block, like this:
 
 ## Non-rendered blocks
 ```
-[?]this is a comment and is not rendered[?]
+[!]this is a comment and is not rendered[/]
 
-Any block can end in ? and it will be "hidden"
+Any block can end in ! and it will be "hidden"
 so you can do:
 
-[### myAttr=foo ?]
+[### myAttr=foo !]
 this is a text block with myAttr=foo.
 Code blocks are especially useful for this, since
 they can contain configuration, code to run, etc.
@@ -128,20 +139,14 @@ Text markup:
  * `[h1]` heading 1
  * `[h2]` heading 2
  * `[h3]` heading 3
- * `[t]` text block. Useful for attaching attributes.
- * `[?]` comment. Inner text not rendered.
+ * `[!]` comment. Inner text not rendered.
 
-Lists:
+Containers:
 
- * `[*]` bullet point.
- * `[  *]` indented bullet point
- * `[1]` numbered list
- * `[  1]` indented numbered list
- * `[ ]` unchecked box
- * `[   ]` indented unchecked box (note: this renders incorrectly on github)
- * `[X]` checked box (also `[x]`)
- * `[  X]` indented unchecked box (note: this renders incorrectly on github)
- * `[list]` for explicit list
+ * `[t]` starts a "text container" where attributes can be applied.
+ * `[+]` starts a list. The first non-whitespace character determines the list
+         type (`*`, `1.`, `[ ]`, `[X]`)
+ * `[table]` starts a table.
 
 Linking
  * `[... mark=markName]` creates a mark that can be linked to
@@ -152,7 +157,7 @@ Code Blocks
  * `[#]` code block, can use more than one `#` for open/close.
 
 Attributes are added in `attr=foo` form:
- * `?` at end causes item to be "hidden"
+ * `!` at end causes item to be "hidden"
  * mark: attribute which creates a mark that can be linked `[l]` to.
  * ref: using `ref=http://website.com` will cause the block to render a link.
  * title: adds title text.

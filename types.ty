@@ -19,13 +19,13 @@ bitmap CAttrs [
 struct Text [
   body:   Str
   tAttrs: TAttrs
-  attrs:  MapStrDyn
+  attrs:  MapStrStr
 ]
 
 struct Cont [ \ Container
   arr:    Arr[El]
   cAttrs: CAttrs
-  attrs:  MapStrDyn
+  attrs:  MapStrStr
 ]
 
 enum El [

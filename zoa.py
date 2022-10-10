@@ -385,6 +385,16 @@ class BmVar: # Bitmap Variant
       bitmapSelf.value = ((~varSelf.msk) & bitmapSelf.value) | var
     return closure
 
+  def _togVariantClosure(varSelf):
+    def closure(bitmapSelf):
+      if not varSelf.var: raise TypeError("Toggle not allowed on value=0")
+      v = varSelf.msk & bitmapSelf.value
+      if v == varSelf.var: bitmapSelf.value &= ~varSelf.msk  # clear
+      elif v == 0:         bitmapSelf.value |= varSelf.var   # set
+      else: raise ValueError(
+        f"Attempted toggle on multi-var mask at a different var: {v}")
+    return closure
+
   def _isVariantClosure(varSelf):
     def closure(bitmapSelf):
       return varSelf.msk & bitmapSelf.value == varSelf.var
@@ -413,8 +423,9 @@ class DynType(Enum):
   ArrData  = 0x22
   ArrInt   = 0x23
 
-  MapStr   = 0x41
-  MapData  = 0x42
+  MapStr    = 0x41
+  MapData   = 0x42
+  MapStrStr = 0x43
 
 dynFrZMethod = {
   DynType.Str: Str.frZ,
@@ -484,8 +495,10 @@ dynFrZMethod[DynType.ArrDyn] = ArrDyn.frZ
 
 MapStrDyn  = type('MapStrDyn', (MapBase,),  {'_vty': Str, '_kty': Dyn, 'name': 'MapStrDyn'})
 MapDataDyn = type('MapDataDyn', (MapBase,), {'_vty': Data,'_kty': Dyn, 'name': 'MapDataDyn'})
+MapStrStr  = type('MapStrStr', (MapBase,),  {'_vty': Str, '_kty': Str, 'name': 'MapStrStr'})
 dynFrZMethod[DynType.MapStr] = MapStrDyn.frZ
 dynFrZMethod[DynType.MapData] = MapDataDyn.frZ
+dynFrZMethod[DynType.MapStrStr] = MapStrStr.frZ
 
 def _frPyArrDyn(cls, arr): return cls._arrDyn(ArrDyn.frPy(arr))
 
@@ -504,6 +517,7 @@ class TyEnv:
       b'ArrInt': ArrInt,
       b'MapStrDyn': MapStrDyn,
       b'MapDataDyn': MapDataDyn,
+      b'MapStrStr': MapStrStr,
     }
 
   def arr(self, ty: Any) -> ArrBase:
@@ -572,6 +586,7 @@ class TyEnv:
       methods['get_' + n] = var._getVariantClosure()
       methods['set_' + n] = var._setVariantClosure()
       methods['is_' + n] = var._isVariantClosure()
+      methods['tog_' + n] = var._togVariantClosure()
     ty = type(name.decode('utf-8'), (BitmapBase,), methods)
     self.tys[mn] = ty
     return ty
@@ -634,11 +649,6 @@ class BaseParser:
 
   def error(self, msg): raise ParseError(self.line, msg)
 
-
-@dataclass
-class Parser(BaseParser):
-  env: TyEnv = dataclasses.field(default_factory=TyEnv)
-
   def skipWhitespace(self):
     while self.i < len(self.buf) and TG.fromChr(self.buf[self.i]) is TG.T_WHITE:
       if self.buf[self.i] == ord('\n'):
@@ -678,6 +688,12 @@ class Parser(BaseParser):
 
   def sugar(self, s):
     if self.peek() == s.encode('utf-8'): self.token() # consume token
+
+
+@dataclass
+class Parser(BaseParser):
+  env: TyEnv = dataclasses.field(default_factory=TyEnv)
+
   def _blockComment(self):
     while self.i < len(self.buf):
       if self.buf[self.i:self.i+1] == b'\\(':
