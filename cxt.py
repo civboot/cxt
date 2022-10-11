@@ -35,6 +35,11 @@ RE_H = re.compile(b'h[123]')
 
 emptyAttrs = dict()
 
+CText = CAttrs(0); CText.set_t()
+CH1  = CAttrs(0); CH1.set_h1()
+CH2  = CAttrs(0); CH2.set_h2()
+CH3  = CAttrs(0); CH3.set_h3()
+
 def isCode(name): return RE_CODE.match(name)
 def isHdr(name):  return RE_H.match(name)
 def isChng(name): return name in CMD_BOOLEANS
@@ -201,7 +206,7 @@ class Parser:
       if t == b'=':
         value = self.cmdToken()
         self._checkCmdToken(value)
-        cmd.updateAttr(name, value)
+        cmd.updateAttr(name, value.decode('utf-8'))
         name = None  # get a new token for next name
       else:
         cmd.updateAttr(name, True)
@@ -232,13 +237,23 @@ class Parser:
     elif cmd.name == b'~': self.s.tAttrs.tog_strike()
 
   def parseText(self, cmd):
-    s = self.recurse(ParserState(
-      out=self.s.out,
+    attrs = dict(self.s.attrs)
+    attrs.update(cmd.attrs)
+    prevS = self.recurse(ParserState(
+      out=[],
       tAttrs=cmd.tAttrs,
-      attrs=dict(self.s.attrs)))
-    self.s.attrs.update(cmd.attrs) # override attrs with cmd attrs
+      attrs={}))
     self.parse()
-    self.unrecurse(s)
+    prevS.out.append(Cont(self.s.out, CText, attrs))
+    self.unrecurse(prevS)
+
+  def parseRef(self, cmd):
+    self.handleBody()
+    ref = self.until(b'[/]').decode('utf-8')
+    a = dict(self.s.attrs)
+    a.update(cmd.attrs)
+    a[b'r'] = ref
+    self.s.out.append(Cont([text(ref)], CText, a))
 
   def startBullet(self, l, token):
     if not token: return
@@ -278,16 +293,37 @@ class Parser:
     prevS.out.append(Cont(arr=l, cAttrs=c, attrs=cmd.attrs))
     self.unrecurse(prevS)
 
-  def doCmd(self, cmd: Cmd) -> bool:
+  def parseHdr(self, cmd):
+    if   cmd.name == b'h1': c = CH1
+    elif cmd.name == b'h2': c = CH2
+    elif cmd.name == b'h3': c = CH3
+    else: self.error(f"Unknown header: {cmd.name}")
+    prevS = self.recurse(ParserState(
+      out=[],
+      tAttrs=self.s.tAttrs,
+      attrs=self.s.attrs))
+
+    while True:
+      self.checkEof(self.notEof(), '[/]')
+      if self.parse() is None:
+        break
+
+    attrs = dict(self.s.attrs)
+    attrs.update(cmd.attrs)
+    prevS.out.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
+    self.unrecurse(prevS)
+
+  def doCmd(self, cmd: Cmd) -> Pg:
     if not cmd.name: return  # ignore []
     elif isCode(cmd.name): self.parseCode(cmd)
     elif cmd.name == b't': self.parseText(cmd)
     elif isChng(cmd.name): self.parseChng(cmd)
-    elif cmd.name == b'+': self.parseList(cmd)
-    elif isHdr(cmd.name):  pass # TODO
+    elif cmd.name == b'+': self.parseList(cmd); return NOT_PG
+    elif isHdr(cmd.name):  self.parseHdr(cmd);  return NOT_PG
     elif cmd.name == b'n': self.body.extend(b'\n')
     elif cmd.name == b's': self.body.extend(b' ')
     elif cmd.name == b'`': self.body.extend(b'`')
+    elif cmd.name == b'r': self.parseRef(cmd)
     else: self.error(f"Unknown cmd: {cmd}")
 
   def parseLine(self, pg: Pg):
@@ -315,7 +351,8 @@ class Parser:
         cmd = self.parseCmd()
         if cmd.name == b'/':
           return (True, pg)
-        self.doCmd(cmd)
+        newPg = self.doCmd(cmd)
+        if newPg is not None: pg = newPg
       elif c == ord(']'): self.parseCloseBracket()
       else: self.body.append(c)
     return (False, pg)
@@ -334,10 +371,24 @@ def parse(b: bytes) -> list:
   if out is None: p.error("Unexpected [/]")
   return out
 
+def htmlCode(start, end, el):
+  if not el.tAttrs.is_code(): return
+  if '\n' in el.body:
+    start.append('<pre>');  end.append('</pre>')
+  else:
+    start.append('<code>'); end.append('</code>')
+
+def htmlRef(start, end, el):
+  ref = el.attrs.get(b'r')
+  if ref:
+    start.append(f'<a href="{ref}">')
+    end.append('</a>')
+
 
 def htmlText(t: Text) -> str:
   a = t.tAttrs
   start = []
+
   end = []
   if a.is_b():
     start.append('<b>'); end.append('</b>')
@@ -347,17 +398,21 @@ def htmlText(t: Text) -> str:
     start.append('<u>'); end.append('</u>')
   if a.is_strike():
     start.append('<s>'); end.append('</s>')
-  if a.is_code():
-    start.append('<code>'); end.append('</code>')
+  htmlCode(start, end, t)
+  htmlRef(start, end, t)
+
   text = '<p>'.join(t.body.split('\n'))
   return ''.join(start) + text + ''.join(end)
 
 def _htmlCont(cont: Cont):
+  start = []; end = []
+  htmlRef(start, end, cont)
   out = []
   for el in cont.arr:
     if isinstance(el, Text): out.append(htmlText(el))
     else                   : out.append(htmlCont(el))
-  return '>' + ''.join(out)
+
+  return '>' + ''.join(start) + ''.join(out) + ''.join(end)
 
 def liIsOrdered(c: CAttrs):
   if c.is_star():    return False
@@ -389,12 +444,14 @@ def htmlCont(cont: Cont) -> str:
   if c.is_h3(): return '<h3'  + _htmlCont(cont) + '</h3>'
   if c.is_list(): return htmlList(cont)
 
-
+# TODO: not properly html-itizing text, leading to weird code blocks (among
+# other issues)
 def html(els: list[El]):
   out = []
   for el in els:
-    if isinstance(el, Text): out.append(htmlText(el))
-    else:                    out.append(htmlCont(el))
+    if isinstance(el, Text):   out.append(htmlText(el))
+    elif isinstance(el, Cont): out.append(htmlCont(el))
+    else: raise TypeError(el)
   return out
 
 

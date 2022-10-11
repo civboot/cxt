@@ -38,7 +38,7 @@ class TestParser(unittest.TestCase):
     assert cmd.name == b'cmd'
     assert cmd.tAttrs == TAttrs(0)
     assert cmd.cAttrs == CAttrs(0)
-    assert cmd.attrs == {b'a': True, b'foo': b'bar'}
+    assert cmd.attrs == {b'a': True, b'foo': 'bar'}
 
   def testParseLine(self):
     p = Parser(b'  some text here\nand here\n\n')
@@ -84,7 +84,7 @@ class TestParser(unittest.TestCase):
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'some code', ACode)
     assert o[2] == text(b' plain again ')
-    assert o[3] == text(b'more code', ACode, odict({b'a': b'foo'}))
+    assert o[3] == text(b'more code', ACode, odict({b'a': 'foo'}))
     assert p.body == b''
 
   def testTextBlock(self):
@@ -92,9 +92,16 @@ class TestParser(unittest.TestCase):
     o = p.parse(); assert len(o) == 5
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'bold ', ABold)
-    assert o[2] == text(b'foo', ABold, {b'a': b'foo'})
+    assert o[2] == Cont([text(b'foo', ABold)], CText, {b'a': 'foo'})
     assert o[3] == text(b' more bold', ABold)
     assert o[4] == text(b' some plain')
+
+  def testRef(self):
+    o = parse(b'[r]reference[/][t r=tref]text[/]'); assert len(o) == 2
+    expected = Cont([text('reference')], CText, {b'r': 'reference'})
+    assert o[0] == expected
+    expected = Cont([text('text')], CText, {b'r': 'tref'})
+    assert o[1] == expected
 
   def testList(self):
     p = Parser(
@@ -134,12 +141,27 @@ class TestHtml(unittest.TestCase):
     expected = 'plain <code>some code</code> <b>bold</b> plain <code>more code</code>'
     assert expected == result
 
+  def testRef(self):
+    o = parse(b'a url: [r]http://foo.txt[/]') # [t r=tref]text[/]')
+    result = ''.join(html(o))
+    expected = 'a url: <span><a href="http://foo.txt">http://foo.txt</a></span>'
+    assert expected == result
+
+    o = parse(b'[r]reference[/]') # [t r=tref]text[/]')
+
+  def testH1(self):
+    o = parse(b'[h1]header[/]\nsome text')
+    result = ''.join(html(o))
+    expected = '<h1>header</h1>some text'
+    assert expected == result
+
   def testList(self):
-    o = parse( b'''[+]
+    o = parse(b'''[+]
     * item1
     * item2[/]''')
     result = ''.join(html(o))
     expected = '<ul><li>item1</li><li>item2</li></ul>'
+
 
 
 if __name__ == '__main__':
