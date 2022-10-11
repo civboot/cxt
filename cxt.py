@@ -86,8 +86,14 @@ class Parser:
   skippedSpaces: int = 0
 
   def error(self, msg): raise zoa.ParseError(self.line, msg)
+  def notEof(self): return self.i < len(self.buf)
   def checkEof(self, cond, s: str):
     if not cond: self.error(f'unexpected EoF waiting for: {s}')
+
+  def expect(self, c):
+    self.checkEof(self.notEof(), chr(c))
+    found = self.buf[self.i]; self.i += 1
+    if c != found: self.error(f'expected {chr(c)} found {chr(found)}.')
 
   def recurse(self, newState):
     self.handleBody()
@@ -119,7 +125,6 @@ class Parser:
       self.i += 1
     return out[:-len(b)]
 
-  def notEof(self): return self.i < len(self.buf)
 
   def cmdToken(self):
     token = bytearray()
@@ -152,19 +157,22 @@ class Parser:
 
   def listBox(self):
     c = self.buf[self.i]; self.i += 1
-    if c == ord(' '):             return b'[ ]'
-    if c in (ord('X'), ord('x')): return b'[X]'
-    self.i -= 2
-    return b''
+    if   c == ord('/'):             out = b'[/]'
+    elif c == ord(' '):             out = b'[ ]'
+    elif c in (ord('X'), ord('x')): out = b'[X]'
+    else: self.i -= 2; return b''
+    self.expect(ord(']'))
+    return out
 
   def listToken(self):
-    while self.notEof():
+    while True:
+      self.checkEof(self.notEof(), '[/]')
       c = self.buf[self.i]; self.i += 1
-      if c <= ord(' '): pass  # skip whitespace FIXME: space
+      if c == ord(' '): pass  # skip spaces
       elif c == ord('*'):             return b'*'
       elif ord('0') <= c <= ord('9'): return numToken(bytearray([c]))
-      elif c == ord('['):             return listBox()
-      else:                           return b''
+      elif c == ord('['):             return self.listBox()
+      else: self.i -= 1; return b''
 
   def _checkCmdToken(self, t):
       if t == b'[': self.error("Did not expect: '['")
@@ -232,10 +240,11 @@ class Parser:
 
   def startBullet(self, l, token):
     self.handleBody()
-    attrs = {'item': token.decode('utf-8')}
-    c = CAttrs(0); c.set_tItem()
-    l.append(Cont(arr=self.out, cAttrs=c, attrs=attrs))
-    self.out = []
+    if token:
+      attrs = {'item': token.decode('utf-8')}
+      c = CAttrs(0); c.set_lItem()
+      l.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
+      self.s.out = []
 
   def parseList(self, cmd):
     prevS = self.recurse(ParserState(
@@ -243,12 +252,20 @@ class Parser:
       tAttrs=self.s.tAttrs,
       attrs=dict(self.s.attrs)))
     l = []
-    pg = IN_PG
+    pg = NOT_PG
+    lastToken = None
     while self.notEof():
       t = self.listToken()
-      if t: startBullet(l, t)
+      if t == b'[/]': break # close
+      if t:
+        self.startBullet(l, lastToken)
+        lastToken = t
+        pg = NOT_PG
       close, pg = self.parseLine(pg)
       if close: break
+    self.startBullet(l, lastToken)
+    c = CAttrs(0); c.set_list()
+    prevS.out.append(Cont(arr=l, cAttrs=c, attrs=cmd.attrs))
     self.unrecurse(prevS)
 
   def doCmd(self, cmd: Cmd) -> bool:
@@ -271,12 +288,13 @@ class Parser:
     while self.notEof():
       c = self.buf[self.i]
       self.i += 1
+      if c == ord(' ') and pg is NOT_PG: continue # skip spaces
       if c == ord('\n'):
         if   pg is NOT_PG: pass # ignore extra '\n'
         elif pg is IN_PG: pg = END_PG_MAYBE
         elif pg is END_PG_MAYBE:
           pg = NOT_PG; self.body.extend(b'\n')
-        else: assert False, "unreachable"
+        else: assert False, f"unreachable: {pg}"
         return (False, pg)
       elif pg is END_PG_MAYBE: # previous line was '\n'
         if c == ord(' '): continue # skip spaces
@@ -292,7 +310,7 @@ class Parser:
       else: self.body.append(c)
     return (False, pg)
 
-  def parse(self, pg=1):
+  def parse(self, pg=IN_PG):
     while self.notEof():
       close, pg = self.parseLine(pg)
       if close: return

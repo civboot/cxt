@@ -8,6 +8,16 @@ ACode = TAttrs(0); ACode.set_code()
 ABold = TAttrs(0); ABold.set_b()
 AItalic = TAttrs(0); AItalic.set_i()
 
+CList  = CAttrs(0); CList.set_list()
+CLItem = CAttrs(0); CLItem.set_lItem()
+
+def li(arr, cAttrs=CLItem, item = '*'):
+  return Cont(arr, cAttrs, {'item': item})
+
+def cList(arr, cAttrs=CList, attrs=None):
+  attrs = attrs or {}
+  return Cont(arr, cAttrs, attrs)
+
 class TestParser(unittest.TestCase):
   def test_until(self):
     p = Parser(b'foo bar[c]')
@@ -27,11 +37,11 @@ class TestParser(unittest.TestCase):
     assert cmd.attrs == {b'a': True, b'foo': b'bar'}
 
   def testParseLine(self):
-    p = Parser(b'  some text here\n and here\n\n')
-    _, pg = p.parseLine(1)
+    p = Parser(b'  some text here\nand here\n\n')
+    _, pg = p.parseLine(NOT_PG)
     assert pg is END_PG_MAYBE
     assert not p.s.out
-    expected = b'  some text here'
+    expected = b'some text here'
     assert p.body == expected
 
     _, pg = p.parseLine(pg)
@@ -44,7 +54,7 @@ class TestParser(unittest.TestCase):
 
   def testInline(self):
     p = Parser(b'  text `some code ` more text\n')
-    _, pg = p.parseLine(1)
+    _, pg = p.parseLine(IN_PG)
     assert pg is END_PG_MAYBE
     assert p.body == b' more text'
     assert len(p.s.out) == 2
@@ -55,7 +65,7 @@ class TestParser(unittest.TestCase):
 
   def testBold(self):
     p = Parser(b'plain [b]bolded [b] plain again')
-    p.parseLine(1)
+    p.parseLine(IN_PG)
     assert p.body == b' plain again'
     assert p.s.tAttrs == TAttrs(0)
     assert p.s.out == [
@@ -65,7 +75,7 @@ class TestParser(unittest.TestCase):
 
   def testCode(self):
     p = Parser(b'plain [c]some code[c] plain again [## a=foo]more code[##]')
-    p.parseLine(1)
+    p.parseLine(IN_PG)
     o = p.s.out; assert len(o) == 4
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'some code', ACode)
@@ -82,6 +92,36 @@ class TestParser(unittest.TestCase):
     assert o[2] == text(b'foo', ABold, {b'a': b'foo'})
     assert o[3] == text(b' more bold', ABold)
     assert o[4] == text(b' some plain')
+
+  def testList(self):
+    p = Parser(
+    b'''* item1
+        * item2[/]''')
+    p.parseList(Cmd(b'list', TAttrs(0), CAttrs(0), {}))
+    o = p.s.out;
+    assert len(o) == 1
+    c = o[0]; assert c.cAttrs == CList; assert c.attrs == {}
+    assert len(c.arr) == 2
+    assert c.arr[0] == li([text(b'item1')])
+    assert c.arr[1] == li([text(b'item2')])
+
+  def testListNewline(self):
+    p = Parser(
+    b'''* item1
+          continued.
+        * item2
+
+          multiline.
+    [/]
+    ''')
+    p.parseList(Cmd(b'list', TAttrs(0), CAttrs(0), {}))
+    o = p.s.out;
+    assert len(o) == 1
+    c = o[0]; assert c.cAttrs == CList; assert c.attrs == {}
+    assert len(c.arr) == 2
+    assert c.arr[0] == li([text(b'item1 continued.')])
+    expected = li([text(b'item2\nmultiline.')])
+    assert c.arr[1] == expected
 
 if __name__ == '__main__':
   unittest.main()
