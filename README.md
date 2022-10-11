@@ -31,6 +31,8 @@ and injesting that to generate code for the args structure of a program.
 
 ## Example
 
+> See [Example.cxt][Example.cxt] and the output [Example.html][Example.html]
+
 **Inline code:**
 
 > Some `inline code`, more `inline code`.

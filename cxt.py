@@ -4,8 +4,10 @@ Parses a `.cxt` file into python objects and provides mechanisms to export as
 HTML and view in the terminal.
 """
 
+import argparse
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -329,7 +331,7 @@ class Parser:
 def parse(b: bytes) -> list:
   p = Parser(b)
   out = p.parse()
-  if out is None: raise ValueError("Unexpected [/]")
+  if out is None: p.error("Unexpected [/]")
   return out
 
 
@@ -347,7 +349,7 @@ def htmlText(t: Text) -> str:
     start.append('<s>'); end.append('</s>')
   if a.is_code():
     start.append('<code>'); end.append('</code>')
-  text = '<br>'.join(t.body.split('\n'))
+  text = '<p>'.join(t.body.split('\n'))
   return ''.join(start) + text + ''.join(end)
 
 def _htmlCont(cont: Cont):
@@ -394,3 +396,34 @@ def html(els: list[El]):
     if isinstance(el, Text): out.append(htmlText(el))
     else:                    out.append(htmlCont(el))
   return out
+
+
+argP = argparse.ArgumentParser(description='cxt documentation markup language.')
+argP.add_argument('path', help="Path to file or directory.")
+argP.add_argument('export', help="Path to export file.")
+
+def syserr(msg):
+  print("Error:", msg)
+  sys.exit(1)
+
+def cxtHtml(pth):
+  if not pth.endswith('.cxt'): syserror("Can only process .cxt files")
+  with open(pth, 'rb') as f: b = f.read()
+  els = parse(b)
+  return html(els)
+
+def main(args):
+  h = cxtHtml(args.path)
+  print("Length:", len(h))
+  with open(args.export, 'w') as f:
+    f.write('<!DOCTYPE html>\n<html><body>\n')
+    for l in h:
+      f.write(l)
+      f.write('\n')
+    f.write('</body></html>\n')
+    f.flush()
+  print("Exported html at:", args.export)
+
+if __name__ == '__main__':
+  args = argP.parse_args()
+  main(args)
