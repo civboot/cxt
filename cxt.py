@@ -27,11 +27,11 @@ Text   = tys[b'Text']
 Cont   = tys[b'Cont']
 El     = tys[b'El']
 
-TOKEN_SPECIAL = {ord('['), ord(']'), ord('=')}
-CMD_BOOLEANS = (b'b', b'i', b'~')
+TOKEN_SPECIAL = {'[', ']', '='}
+CMD_BOOLEANS = ('b', 'i', '~')
 
-RE_CODE = re.compile(b'c|code|#+')
-RE_H = re.compile(b'h[123]')
+RE_CODE = re.compile('c|code|#+')
+RE_H = re.compile('h[123]')
 
 emptyAttrs = dict()
 
@@ -45,7 +45,7 @@ def isHdr(name):  return RE_H.match(name)
 def isChng(name): return name in CMD_BOOLEANS
 
 def text(body, tAttrs=TAttrs(0), attrs=None):
-  if not isinstance(body, str): body = body.decode('utf-8')
+  if not isinstance(body, str): body = body
   if attrs is None: attrs = emptyAttrs
   else: attrs = dict(attrs) # copy
   tAttrs = TAttrs(tAttrs.value) # copy
@@ -54,15 +54,15 @@ def text(body, tAttrs=TAttrs(0), attrs=None):
 
 @dataclass
 class Cmd:
-  name: bytes
+  name: str
   tAttrs: TAttrs
   cAttrs: CAttrs
   attrs: dict
 
   def updateAttr(self, attr, value):
-    if isinstance(attr, bytearray):  attr = bytes(attr)
-    if isinstance(value, bytearray): value = bytes(value)
-    if attr == b'code': self.tAttrs.code = value
+    if isinstance(attr, list): attr = ''.join(attr)
+    if isinstance(value, list): attr = ''.join(value)
+    if attr == 'code': self.tAttrs.code = value
     else:               self.attrs[attr] = value
 
 @dataclass
@@ -79,11 +79,11 @@ NOT_PG = Pg.NOT_PG; IN_PG = Pg.IN_PG; END_PG_MAYBE = Pg.END_PG_MAYBE
 
 @dataclass
 class Parser:
-  buf: bytearray
-  mod: bytes = None
+  buf: str
+  mod: str = None
   i: int = 0
   line: int = 1
-  body: bytearray = field(default_factory=bytearray)
+  body: list = field(default_factory=list)
   recursion = 0
   s: ParserState = field(default_factory=ParserState)
 
@@ -98,7 +98,7 @@ class Parser:
     if not cond: self.error(f'unexpected EoF waiting for: {s}')
 
   def expect(self, c):
-    self.checkEof(self.notEof(), chr(c))
+    self.checkEof(self.notEof(), c)
     found = self.buf[self.i]; self.i += 1
     if c != found: self.error(f'expected {chr(c)} found {chr(found)}.')
 
@@ -117,96 +117,97 @@ class Parser:
 
   def handleBody(self):
     if self.body:
-      self.s.out.append(text(self.body, tAttrs=self.s.tAttrs, attrs=self.s.attrs))
+      self.s.out.append(text(
+        ''.join(self.body), tAttrs=self.s.tAttrs, attrs=self.s.attrs))
       self.body.clear()
 
-  def until(self, b: bytes):
-    out = bytearray()
+  def until(self, b: str):
+    out = []
     i = 0
     while i < len(b):
       if self.i >= len(self.buf): self.eof(b)
       c = self.buf[self.i]
       if b[i] == c: i += 1;
       else:         i = 0;
-      out.append(c)
+      out.extend(c)
       self.i += 1
     return out[:-len(b)]
 
 
   def cmdToken(self):
-    token = bytearray()
+    token = []
     while self.notEof():
       c = self.buf[self.i]
       self.i += 1
       if len(token) == 0:
-        if c <= ord(' '): continue # skip whitespace
+        if c <= ' ': continue # skip whitespace
         if c in TOKEN_SPECIAL:
           token.append(c)
           break
-      if c <= ord(' ') or c in TOKEN_SPECIAL:
+      if c <= ' ' or c in TOKEN_SPECIAL:
         self.i -= 1
         break
       token.append(c)
     self.checkEof(token, ']')
-    return token
+    return ''.join(token)
 
   def listNum(self, token):
     while self.notEof():
       c = self.buf[self.i]; self.i += 1
-      if ord('0') <= c <= ord('9'):
+      if '0' <= c <= '9':
         token.append(c)
-      elif c == ord('.'):
+      elif c == '.':
         return token
       else:
        self.s.out.extend(token)
        self.s.out.append(c)
-       return b''
+       return ''
 
   def listBox(self):
     c = self.buf[self.i]; self.i += 1
-    if   c == ord('/'):             out = b'[/]'
-    elif c == ord(' '):             out = b'[ ]'
-    elif c in (ord('X'), ord('x')): out = b'[X]'
-    else: self.i -= 2; return b''
-    self.expect(ord(']'))
+    if   c == '/':             out = '[/]'
+    elif c == ' ':             out = '[ ]'
+    elif c in ('X', 'x'): out = '[X]'
+    else: self.i -= 2; return ''
+    self.expect(']')
     return out
 
   def listToken(self):
     while True:
       self.checkEof(self.notEof(), '[/]')
       c = self.buf[self.i]; self.i += 1
-      if c == ord(' '): pass  # skip spaces
-      elif c == ord('*'):             return b'*'
-      elif ord('0') <= c <= ord('9'): return numToken(bytearray([c]))
-      elif c == ord('['):             return self.listBox()
-      else: self.i -= 1; return b''
+      if c == ' ': pass  # skip spaces
+      elif c == '*':        return '*'
+      elif '0' <= c <= '9': return numToken([c])
+      elif c == '[':        return self.listBox()
+      else: self.i -= 1; return ''
 
   def _checkCmdToken(self, t):
-      if t == b'[': self.error("Did not expect: '['")
-      if t == b'=': self.error("Did not expect: '='")
-      if t == b']': self.error("Did not expect: ']'")
+      if t == '[': self.error("Did not expect: '['")
+      if t == '=': self.error("Did not expect: '='")
+      if t == ']': self.error("Did not expect: ']'")
 
   def newCmd(self, name):
     return Cmd(name, TAttrs(self.s.tAttrs.value), CAttrs(0), dict())
 
   def parseCmd(self):
     name = self.cmdToken()
-    if name == b']': return self.newCmd(b'')  # []
+    if name == ']': return self.newCmd('')  # []
     self._checkCmdToken(name)
 
     cmd = self.newCmd(name)
     name = None
     while True:
       if not name:     name = self.cmdToken()
-      if name == b']': break
+      if name == ']': break
       self._checkCmdToken(name)
 
       t = self.cmdToken()
-      if t == b']': break
-      if t == b'=':
+      if t == ']': break
+      if t == '=':
         value = self.cmdToken()
         self._checkCmdToken(value)
-        cmd.updateAttr(name, value.decode('utf-8'))
+        cmd.updateAttr(name, value)
         name = None  # get a new token for next name
       else:
         cmd.updateAttr(name, True)
@@ -216,7 +217,7 @@ class Parser:
   def parseCloseBracket(self):
     self.checkEof(self.i < len(self.buf))
     c = self.buf[self.i]
-    if c == ord(']'):
+    if c == ']':
       self.body.append(c)
       self.i += 1
     else: self.error("expected ']'")
@@ -224,17 +225,17 @@ class Parser:
   def parseCode(self, cmd):
     self.handleBody()
     cmd.tAttrs.set_code()
-    if cmd.name == b'`': end = b'`'
-    else:                end = b'[' + cmd.name + b']'
-    code = self.until(end).decode('utf-8')
+    if cmd.name == '`': end = '`'
+    else:                end = '[' + cmd.name + ']'
+    code = ''.join(self.until(end))
     self.s.out.append(text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs))
 
   def parseChng(self, cmd):
     self.handleBody()
-    if   cmd.name == b'b': self.s.tAttrs.tog_b()
-    elif cmd.name == b'i': self.s.tAttrs.tog_i()
-    elif cmd.name == b'u': self.s.tAttrs.tog_u()
-    elif cmd.name == b'~': self.s.tAttrs.tog_strike()
+    if   cmd.name == 'b': self.s.tAttrs.tog_b()
+    elif cmd.name == 'i': self.s.tAttrs.tog_i()
+    elif cmd.name == 'u': self.s.tAttrs.tog_u()
+    elif cmd.name == '~': self.s.tAttrs.tog_strike()
 
   def parseText(self, cmd):
     attrs = dict(self.s.attrs)
@@ -249,10 +250,10 @@ class Parser:
 
   def parseRef(self, cmd):
     self.handleBody()
-    ref = self.until(b'[/]').decode('utf-8')
+    ref = ''.join(self.until('[/]'))
     a = dict(self.s.attrs)
     a.update(cmd.attrs)
-    a[b'r'] = ref
+    a['r'] = ref
     self.s.out.append(Cont([text(ref)], CText, a))
 
   def startBullet(self, l, token):
@@ -260,12 +261,12 @@ class Parser:
     self.handleBody()
     c = CAttrs(0)
     attrs = {}
-    if token == b'*':   c.set_star()
-    elif token == b'[ ]': c.set_nochk()
-    elif token == b'[X]': c.set_chk()
-    elif ord('0') <= token[0] <= ord('9'):
+    if token == '*':   c.set_star()
+    elif token == '[ ]': c.set_nochk()
+    elif token == '[X]': c.set_chk()
+    elif '0' <= token[0] <= '9':
       c.set_num()
-      attrs['value'] = token.decode('utf-8')
+      attrs['value'] = token
     else: assert False, f"unreachable: {token}"
 
     l.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
@@ -281,7 +282,7 @@ class Parser:
     lastToken = None
     while self.notEof():
       t = self.listToken()
-      if t == b'[/]': break # close
+      if t == '[/]': break # close
       if t:
         self.startBullet(l, lastToken)
         lastToken = t
@@ -294,9 +295,9 @@ class Parser:
     self.unrecurse(prevS)
 
   def parseHdr(self, cmd):
-    if   cmd.name == b'h1': c = CH1
-    elif cmd.name == b'h2': c = CH2
-    elif cmd.name == b'h3': c = CH3
+    if   cmd.name == 'h1': c = CH1
+    elif cmd.name == 'h2': c = CH2
+    elif cmd.name == 'h3': c = CH3
     else: self.error(f"Unknown header: {cmd.name}")
     prevS = self.recurse(ParserState(
       out=[],
@@ -316,14 +317,14 @@ class Parser:
   def doCmd(self, cmd: Cmd) -> Pg:
     if not cmd.name: return  # ignore []
     elif isCode(cmd.name): self.parseCode(cmd)
-    elif cmd.name == b't': self.parseText(cmd)
+    elif cmd.name == 't': self.parseText(cmd)
     elif isChng(cmd.name): self.parseChng(cmd)
-    elif cmd.name == b'+': self.parseList(cmd); return NOT_PG
+    elif cmd.name == '+': self.parseList(cmd); return NOT_PG
     elif isHdr(cmd.name):  self.parseHdr(cmd);  return NOT_PG
-    elif cmd.name == b'n': self.body.extend(b'\n')
-    elif cmd.name == b's': self.body.extend(b' ')
-    elif cmd.name == b'`': self.body.extend(b'`')
-    elif cmd.name == b'r': self.parseRef(cmd)
+    elif cmd.name == 'n': self.body.append('\n')
+    elif cmd.name == 's': self.body.append(' ')
+    elif cmd.name == '`': self.body.append('`')
+    elif cmd.name == 'r': self.parseRef(cmd)
     else: self.error(f"Unknown cmd: {cmd}")
 
   def parseLine(self, pg: Pg):
@@ -334,26 +335,26 @@ class Parser:
     while self.notEof():
       c = self.buf[self.i]
       self.i += 1
-      if c == ord(' ') and pg is NOT_PG: continue # skip spaces
-      if c == ord('\n'):
+      if c == ' ' and pg is NOT_PG: continue # skip spaces
+      if c == '\n':
         if   pg is NOT_PG: pass # ignore extra '\n'
         elif pg is IN_PG: pg = END_PG_MAYBE
         elif pg is END_PG_MAYBE:
-          pg = NOT_PG; self.body.extend(b'\n')
+          pg = NOT_PG; self.body.append('\n')
         else: assert False, f"unreachable: {pg}"
         return (False, pg)
       elif pg is END_PG_MAYBE: # previous line was '\n'
-        if c == ord(' '): continue # skip spaces
-        self.body.extend(b' ')
+        if c == ' ': continue # skip spaces
+        self.body.append(' ')
       pg = IN_PG
-      if c == ord('`'): self.parseCode(self.newCmd(b'`'))
-      elif c == ord('['):
+      if c == '`': self.parseCode(self.newCmd('`'))
+      elif c == '[':
         cmd = self.parseCmd()
-        if cmd.name == b'/':
+        if cmd.name == '/':
           return (True, pg)
         newPg = self.doCmd(cmd)
         if newPg is not None: pg = newPg
-      elif c == ord(']'): self.parseCloseBracket()
+      elif c == ']': self.parseCloseBracket()
       else: self.body.append(c)
     return (False, pg)
 
@@ -365,7 +366,7 @@ class Parser:
     return self.s.out
 
 
-def parse(b: bytes) -> list:
+def parse(b: str) -> list:
   p = Parser(b)
   out = p.parse()
   if out is None: p.error("Unexpected [/]")
@@ -379,7 +380,7 @@ def htmlCode(start, end, el):
     start.append('<code>'); end.append('</code>')
 
 def htmlRef(start, end, el):
-  ref = el.attrs.get(b'r')
+  ref = el.attrs.get('r')
   if ref:
     start.append(f'<a href="{ref}">')
     end.append('</a>')
@@ -465,7 +466,7 @@ def syserr(msg):
 
 def cxtHtml(pth):
   if not pth.endswith('.cxt'): syserror("Can only process .cxt files")
-  with open(pth, 'rb') as f: b = f.read()
+  with open(pth, 'r') as f: b = f.read()
   els = parse(b)
   return html(els)
 
