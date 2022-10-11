@@ -7,6 +7,7 @@ HTML and view in the terminal.
 import os
 import re
 from dataclasses import dataclass, field
+from enum import Enum
 
 import zoa
 from zoa import BaseParser
@@ -63,7 +64,11 @@ class ParserState:
   attrs: dict = field(default_factory=dict)
   out: list = field(default_factory=list)
 
-
+class Pg(Enum):
+  NOT_PG = 0
+  IN_PG  = 1
+  END_PG_MAYBE = 2
+NOT_PG = Pg.NOT_PG; IN_PG = Pg.IN_PG; END_PG_MAYBE = Pg.END_PG_MAYBE
 
 @dataclass
 class Parser:
@@ -155,7 +160,7 @@ class Parser:
   def listToken(self):
     while self.notEof():
       c = self.buf[self.i]; self.i += 1
-      if c <= ord(' '): pass  # skip whitespace
+      if c <= ord(' '): pass  # skip whitespace FIXME: space
       elif c == ord('*'):             return b'*'
       elif ord('0') <= c <= ord('9'): return numToken(bytearray([c]))
       elif c == ord('['):             return listBox()
@@ -238,11 +243,11 @@ class Parser:
       tAttrs=self.s.tAttrs,
       attrs=dict(self.s.attrs)))
     l = []
-    started, paragraph = True, 1
+    pg = IN_PG
     while self.notEof():
       t = self.listToken()
       if t: startBullet(l, t)
-      close, started, paragraph = self._parse(started, paragraph)
+      close, pg = self.parseLine(pg)
       if close: break
     self.unrecurse(prevS)
 
@@ -258,39 +263,37 @@ class Parser:
     elif cmd.name == b'`': self.body.extend(b'`')
     else: self.error(f"Unknown cmd: {cmd}")
 
-  def _parse(self, started, paragraph):
+  def parseLine(self, pg: Pg):
     """Parse the remainder of a line or until an `[/]`
 
-    Params:
-      started: whether text has started after header
-      paragraph: 0=not pg, 1=in pg, 2=might be ending pg
-
-    Returns: close, started, paragraph
+    Returns: closed, pg
     """
     while self.notEof():
       c = self.buf[self.i]
       self.i += 1
       if c == ord('\n'):
-        if not started: pass
-        elif paragraph == 1: paragraph = 2 # could be ending paragraph
-        elif paragraph == 2: paragraph = 0; self.body.extend(b'\n')
-        else:                               self.body.extend(b'\n')
-        return (False, started, paragraph)
-      started = True
+        if   pg is NOT_PG: pass # ignore extra '\n'
+        elif pg is IN_PG: pg = END_PG_MAYBE
+        elif pg is END_PG_MAYBE:
+          pg = NOT_PG; self.body.extend(b'\n')
+        else: assert False, "unreachable"
+        return (False, pg)
+      elif pg is END_PG_MAYBE: # previous line was '\n'
+        if c == ord(' '): continue # skip spaces
+        self.body.extend(b' ')
+      pg = IN_PG
       if c == ord('`'): self.parseCode(self.newCmd(b'`'))
       elif c == ord('['):
         cmd = self.parseCmd()
         if cmd.name == b'/':
-          return (True, started, paragraph)
+          return (True, pg)
         self.doCmd(cmd)
       elif c == ord(']'): self.parseCloseBracket()
-      else:
-        paragraph = 1
-        self.body.append(c)
-    return (False, started, paragraph)
+      else: self.body.append(c)
+    return (False, pg)
 
-  def parse(self, started=True, paragraph=1):
+  def parse(self, pg=1):
     while self.notEof():
-      close, started, paragraph = self._parse(started, paragraph)
+      close, pg = self.parseLine(pg)
       if close: return
     self.handleBody()

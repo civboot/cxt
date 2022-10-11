@@ -28,15 +28,15 @@ class TestParser(unittest.TestCase):
 
   def testParseLine(self):
     p = Parser(b'  some text here\n and here\n\n')
-    _, st, para = p._parse(True, 1)
-    assert st == True; assert para == 2
+    _, pg = p.parseLine(1)
+    assert pg is END_PG_MAYBE
     assert not p.s.out
     expected = b'  some text here'
     assert p.body == expected
 
-    _, st, para = p._parse(st, para)
-    assert st == True; assert para == 2
-    _, st, para = p._parse(st, para)
+    _, pg = p.parseLine(pg)
+    assert pg is END_PG_MAYBE
+    _, pg = p.parseLine(pg)
     expected += b' and here\n'
     assert p.body == expected
     assert p.i == len(p.buf)
@@ -44,8 +44,8 @@ class TestParser(unittest.TestCase):
 
   def testInline(self):
     p = Parser(b'  text `some code ` more text\n')
-    _, st, para = p._parse(True, 1)
-    assert st == True; assert para == 2
+    _, pg = p.parseLine(1)
+    assert pg is END_PG_MAYBE
     assert p.body == b' more text'
     assert len(p.s.out) == 2
     assert p.s.out == [
@@ -55,7 +55,7 @@ class TestParser(unittest.TestCase):
 
   def testBold(self):
     p = Parser(b'plain [b]bolded [b] plain again')
-    p._parse(True, 1)
+    p.parseLine(1)
     assert p.body == b' plain again'
     assert p.s.tAttrs == TAttrs(0)
     assert p.s.out == [
@@ -65,7 +65,7 @@ class TestParser(unittest.TestCase):
 
   def testCode(self):
     p = Parser(b'plain [c]some code[c] plain again [## a=foo]more code[##]')
-    p._parse(True, 1)
+    p.parseLine(1)
     o = p.s.out; assert len(o) == 4
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'some code', ACode)
@@ -80,7 +80,7 @@ class TestParser(unittest.TestCase):
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'bold ', ABold)
     assert o[2] == text(b'foo', ABold, {b'a': b'foo'})
-    assert o[3] == text(b'more bold', ABold)
+    assert o[3] == text(b' more bold', ABold)
     assert o[4] == text(b' some plain')
 
 if __name__ == '__main__':
