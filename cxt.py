@@ -24,7 +24,17 @@ Text   = tys[b'Text']
 Cont   = tys[b'Cont']
 El     = tys[b'El']
 
+TOKEN_SPECIAL = {ord('['), ord(']'), ord('=')}
+CMD_BOOLEANS = (b'b', b'i', b'~')
+
+RE_CODE = re.compile(b'c|code|#+')
+RE_H = re.compile(b'h[123]')
+
 emptyAttrs = dict()
+
+def isCode(name): return RE_CODE.match(name)
+def isHdr(name):  return RE_H.match(name)
+def isChng(name): return name in CMD_BOOLEANS
 
 def text(body, tAttrs=TAttrs(0), attrs=None):
   if not isinstance(body, str): body = body.decode('utf-8')
@@ -32,6 +42,7 @@ def text(body, tAttrs=TAttrs(0), attrs=None):
   else: attrs = dict(attrs) # copy
   tAttrs = TAttrs(tAttrs.value) # copy
   return Text(body=body, tAttrs=tAttrs, attrs=attrs)
+
 
 @dataclass
 class Cmd:
@@ -46,18 +57,13 @@ class Cmd:
     if attr == b'code': self.tAttrs.code = value
     else:               self.attrs[attr] = value
 
-
-TOKEN_SPECIAL = {ord('['), ord(']'), ord('=')}
-CMD_BOOLEANS = (b'b', b'i', b'~')
-
-RE_CODE = re.compile(b'#+')
-RE_H = re.compile(b'h[123]')
-
 @dataclass
 class ParserState:
   tAttrs: TAttrs = TAttrs(0)
   attrs: dict = field(default_factory=dict)
   out: list = field(default_factory=list)
+
+
 
 @dataclass
 class Parser:
@@ -127,6 +133,34 @@ class Parser:
     self.checkEof(token, ']')
     return token
 
+  def listNum(self, token):
+    while self.notEof():
+      c = self.buf[self.i]; self.i += 1
+      if ord('0') <= c <= ord('9'):
+        token.append(c)
+      elif c == ord('.'):
+        return token
+      else:
+       self.s.out.extend(token)
+       self.s.out.append(c)
+       return b''
+
+  def listBox(self):
+    c = self.buf[self.i]; self.i += 1
+    if c == ord(' '):             return b'[ ]'
+    if c in (ord('X'), ord('x')): return b'[X]'
+    self.i -= 2
+    return b''
+
+  def listToken(self):
+    while self.notEof():
+      c = self.buf[self.i]; self.i += 1
+      if c <= ord(' '): pass  # skip whitespace
+      elif c == ord('*'):             return b'*'
+      elif ord('0') <= c <= ord('9'): return numToken(bytearray([c]))
+      elif c == ord('['):             return listBox()
+      else:                           return b''
+
   def _checkCmdToken(self, t):
       if t == b'[': self.error("Did not expect: '['")
       if t == b'=': self.error("Did not expect: '='")
@@ -137,6 +171,7 @@ class Parser:
 
   def parseCmd(self):
     name = self.cmdToken()
+    if name == b']': return self.newCmd(b'')  # []
     self._checkCmdToken(name)
 
     cmd = self.newCmd(name)
@@ -174,6 +209,13 @@ class Parser:
     code = self.until(end).decode('utf-8')
     self.s.out.append(text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs))
 
+  def parseChng(self, cmd):
+    self.handleBody()
+    if   cmd.name == b'b': self.s.tAttrs.tog_b()
+    elif cmd.name == b'i': self.s.tAttrs.tog_i()
+    elif cmd.name == b'u': self.s.tAttrs.tog_u()
+    elif cmd.name == b'~': self.s.tAttrs.tog_strike()
+
   def parseText(self, cmd):
     s = self.recurse(ParserState(
       out=self.s.out,
@@ -183,29 +225,37 @@ class Parser:
     self.parse()
     self.unrecurse(s)
 
+  def startBullet(self, l, token):
+    self.handleBody()
+    attrs = {'item': token.decode('utf-8')}
+    c = CAttrs(0); c.set_tItem()
+    l.append(Cont(arr=self.out, cAttrs=c, attrs=attrs))
+    self.out = []
+
   def parseList(self, cmd):
     prevS = self.recurse(ParserState(
       out=[],
       tAttrs=self.s.tAttrs,
       attrs=dict(self.s.attrs)))
-
-    # TODO: use cmd.attrs and cAttrs
+    l = []
+    started, paragraph = True, 1
     while self.notEof():
-      self.parse(started=False, paragraph=0)
+      t = self.listToken()
+      if t: startBullet(l, t)
+      close, started, paragraph = self._parse(started, paragraph)
       if close: break
+    self.unrecurse(prevS)
 
   def doCmd(self, cmd: Cmd) -> bool:
-    if cmd.name in (b'c', b'code') or RE_CODE.match(cmd.name):
-      self.parseCode(cmd)
-    elif cmd.name == b'`': self.body.extend(b'`')
+    if not cmd.name: return  # ignore []
+    elif isCode(cmd.name): self.parseCode(cmd)
     elif cmd.name == b't': self.parseText(cmd)
-    elif cmd.name in CMD_BOOLEANS:
-      self.handleBody()
-      if cmd.name == b'b':   self.s.tAttrs.tog_b()
-      elif cmd.name == b'i': self.s.tAttrs.tog_i()
-      elif cmd.name == b'~': self.s.tAttrs.tog_strike()
-    elif RE_H.match(cmd.name):
-      pass
+    elif isChng(cmd.name): self.parseChng(cmd)
+    elif cmd.name == b'+': self.parseList(cmd)
+    elif isHdr(cmd.name):  pass # TODO
+    elif cmd.name == b'n': self.body.extend(b'\n')
+    elif cmd.name == b's': self.body.extend(b' ')
+    elif cmd.name == b'`': self.body.extend(b'`')
     else: self.error(f"Unknown cmd: {cmd}")
 
   def _parse(self, started, paragraph):
