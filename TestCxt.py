@@ -1,6 +1,6 @@
 import io
 import unittest
-from civtext import *
+from cxt import *
 from pprint import pprint as pp
 from collections import OrderedDict as odict
 

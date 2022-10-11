@@ -1,7 +1,7 @@
-"""Civtext python module.
+"""cxt python module.
 
-Parses a `.ct` file into python objects and provides mechanism to export as
-HTML.
+Parses a `.cxt` file into python objects and provides mechanisms to export as
+HTML and view in the terminal.
 """
 
 import os

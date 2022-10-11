@@ -1,22 +1,19 @@
-# CivText: text markup for civilization
+# cxt: text markup for civilization
 
 It should not take more than a few minutes to know how to read and write
 documentation.
 
-CivText is an ultra-simple markup language similar in spirit [BBCode], designed
+cxt is an ultra-simple markup language similar in spirit [BBCode], designed
 to be as easy as possible to parse while delivering any features necessary to
 the [Civboot] project.
 
-CivText is designed to:
- * Make rendered document writing easy.
- * Make document reading of raw civdoc easy
- * Make parsing documents easy
- * Make consuming structured data from parsing CivText easy.
+cxt is designed to:
+ * Make document writing easy.
+ * Make document documents parsing easy.
+ * Make reading of raw (text) documents easy.
+ * Make consuming structured data from documents easy.
 
-Because of the above there are only two special characters: brackets and
-backticks.
-
-CivText enables (for example) writing a command line utility's documentation as
+cxt enables (for example) writing a command line utility's documentation as
 a `.ct` file, parsing it and exporting it into a structed data format (aka json)
 and injesting that to generate code for the args structure of a program.
 
@@ -27,46 +24,78 @@ and injesting that to generate code for the args structure of a program.
   - [ ] export above to html
   - [ ] parsing tables
 
+> cxt is pronounced _c-x-t_ or  _sext_, at your preference.
+
 [BBCode]: https://en.wikipedia.org/wiki/BBCode
 [Civboot]: https://civboot.org
 
 ## Example
+
+**Inline code:**
+
+> Some `inline code`, more `inline code`.
+```
+Some `inline code`, more [c]inline code[/c].
+```
+
+**Formatting:**
+
+> This sentance has *bold* text, _italic_ text, and
+> *_bold italic_* text.
 ```
 This sentance has [b]bold[b] text, [i]italic[i] text, and
 [b][i]bold italic[i][b] text.
+```
 
-[#]this is code[#], `this is also code`.
+**Linking:**
 
-A url to [t ref=http://civboot.org]CivBoot[t], or displaying and linking the
-full url: [url]http://civboot.org[url]
+> A url to [CivBoot](http://civboot.org), or displaying and linking the
+> full url: [http://civboot.org](http://civboot.org)
+```
+A url to [t r=http://civboot.org]CivBoot[/], or displaying and linking the
+full url: [r]http://civboot.org[/]
+```
 
-[t mark=myMark]
-Creates a "local" mark so that this paragraph can be linked to.  How "local"
-this is depends on the doc compiler, but typically it's within the same
-directory.
-[t]
+**Lists:**
 
-A link to myMark would look like: [l]myMark[l]
-
-Lists: [+]
+> * bullet point
+> * second bullet point
+```
+[+]
  * bullet point
  * second bullet point
 [/]
+```
 
-Numbered Lists: [+]
+**Numbered Lists:**
+
+> 1. first item
+> 2. second item
+```
+[+]
  1. first item
  2. second item
 [/]
+```
 
-Indented lists [+]
+**Indented Lists:**
+
+> * Bullet point
+>   * sub bullet point
+> * second bullet point
+
+```
+[+]
  * Bullet point [+]
    * sub bullet point
  [/]
  * second bullet point
- * third bullet point
 [/]
+```
 
-Checkboxes: [+]
+**Checkboxes:**
+```
+[+]
  [X] done item
  [ ] undone item [+]
    [X] indended done item
@@ -93,12 +122,9 @@ block.
 [#]
 
 [###]
-This is a code block demonstrating
-code blocks with custom ends.
+Using more #'s allows for [#] or even [##] or [####]
 
-It allows me to use [#] or even [##].
-
-Three #'s in brackets end the code block, like this:
+[ ### ] (minus spaces) ends the code block.
 [###]
 ```
 
@@ -110,7 +136,7 @@ Any block can end in ! and it will be "hidden"
 so you can do:
 
 [### myAttr=foo !]
-this is a text block with myAttr=foo.
+this is a code block with myAttr=foo.
 Code blocks are especially useful for this, since
 they can contain configuration, code to run, etc.
 [###]
@@ -124,44 +150,41 @@ Special characters
  ]]   literal close bracket
  [`]  literal backtick
  `inline code` (same as markdown)
+ [c]inline code[c]
+ [#...]inline code[#...]
 ```
 
 Other literals:
  * `[n]` literal newline `\n`
- * `[s]` literal space character, useful if spaces desired at beginning.
+ * `[s]` literal space character (used rarely)
+ * `[]` ignored (sometimes used if leading spaces ignored, i.e. in lists)
 
-Text markup:
+Text markup state: these toggle the current text state (not turned off with
+`[/]`:
+
  * `[i]` italic
  * `[b]` bold
  * `[~]` strikethrough
  * `[u]` underline
- * `[:]` inline code, can use more than one `:` for open/close.
- * `[h1]` heading 1
- * `[h2]` heading 2
- * `[h3]` heading 3
- * `[!]` comment. Inner text not rendered.
 
 Containers:
 
+ * `[!]` comment. Inner text not rendered.
  * `[t]` starts a "text container" where attributes can be applied.
+ * `[r]` reference container.
+ * `[h1]` heading 1
+ * `[h2]` heading 2
+ * `[h3]` heading 3
+ * `[... mark=markName]` creates a mark that can be linked with `[r]`
  * `[+]` starts a list. The first non-whitespace character determines the list
          type (`*`, `1.`, `[ ]`, `[X]`)
- * `[table]` starts a table.
-
-Linking
- * `[... mark=markName]` creates a mark that can be linked to
- * `[l]` link to mark
- * `[url]` url with rendered link
-
-Code Blocks
- * `[#]` code block, can use more than one `#` for open/close.
+ * `[table]` table containing a header `[h]...[/]` and rows `[r]...[/]`,
+   delinited by a `del` (default `|`)
 
 Attributes are added in `attr=foo` form:
  * `!` at end causes item to be "hidden"
  * mark: attribute which creates a mark that can be linked `[l]` to.
- * ref: using `ref=http://website.com` will cause the block to render a link.
- * title: adds title text.
- * l: link attribute, works same as `[l]` but adds to another block.
+ * r: works like `[r]` but can be used like: `[t r=foo]...[/]`
  * otherwise it is a "custom" attribute, some tools process these (i.e. `lang`
    for code, etc)
 
