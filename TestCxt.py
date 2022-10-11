@@ -22,10 +22,6 @@ def cList(arr, cAttrs=CList, attrs=None):
   attrs = attrs or {}
   return Cont(arr, cAttrs, attrs)
 
-def tx(text):
-  if isinstance(text, str): return text
-  return ''.join(text)
-
 class TestParser(unittest.TestCase):
   def testUntil(self):
     p = Parser('foo bar[c]')
@@ -165,8 +161,13 @@ class TestHtml(unittest.TestCase):
     * item2[/]''')
     result = ''.join(html(o))
     expected = '<ul><li>item1</li><li>item2</li></ul>'
+    assert expected == result
 
-
+  def testBlock(self):
+    o = parse('code block:\n[###]\nA code\nblock\n[###]\n')
+    result = ''.join(html(o))
+    expected = 'code block: <pre>\nA code\nblock\n</pre>'
+    assert expected == result
 
 if __name__ == '__main__':
   unittest.main()

@@ -8,6 +8,7 @@ import argparse
 import os
 import re
 import sys
+import html as pyHtml
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -51,6 +52,10 @@ def text(body, tAttrs=TAttrs(0), attrs=None):
   tAttrs = TAttrs(tAttrs.value) # copy
   return Text(body=body, tAttrs=tAttrs, attrs=attrs)
 
+def tx(text):
+  if isinstance(text, str): return text
+  if isinstance(text, bool): return text
+  return ''.join(text)
 
 @dataclass
 class Cmd:
@@ -60,8 +65,8 @@ class Cmd:
   attrs: dict
 
   def updateAttr(self, attr, value):
-    if isinstance(attr, list): attr = ''.join(attr)
-    if isinstance(value, list): attr = ''.join(value)
+    attr = tx(attr)
+    value = tx(value)
     if attr == 'code': self.tAttrs.code = value
     else:               self.attrs[attr] = value
 
@@ -118,7 +123,7 @@ class Parser:
   def handleBody(self):
     if self.body:
       self.s.out.append(text(
-        ''.join(self.body), tAttrs=self.s.tAttrs, attrs=self.s.attrs))
+        tx(self.body), tAttrs=self.s.tAttrs, attrs=self.s.attrs))
       self.body.clear()
 
   def until(self, b: str):
@@ -149,7 +154,7 @@ class Parser:
         break
       token.append(c)
     self.checkEof(token, ']')
-    return ''.join(token)
+    return tx(token)
 
   def listNum(self, token):
     while self.notEof():
@@ -227,7 +232,7 @@ class Parser:
     cmd.tAttrs.set_code()
     if cmd.name == '`': end = '`'
     else:                end = '[' + cmd.name + ']'
-    code = ''.join(self.until(end))
+    code = tx(self.until(end))
     self.s.out.append(text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs))
 
   def parseChng(self, cmd):
@@ -250,7 +255,7 @@ class Parser:
 
   def parseRef(self, cmd):
     self.handleBody()
-    ref = ''.join(self.until('[/]'))
+    ref = tx(self.until('[/]'))
     a = dict(self.s.attrs)
     a.update(cmd.attrs)
     a['r'] = ref
@@ -373,11 +378,12 @@ def parse(b: str) -> list:
   return out
 
 def htmlCode(start, end, el):
-  if not el.tAttrs.is_code(): return
+  if not el.tAttrs.is_code(): return False
   if '\n' in el.body:
     start.append('<pre>');  end.append('</pre>')
   else:
     start.append('<code>'); end.append('</code>')
+  return True
 
 def htmlRef(start, end, el):
   ref = el.attrs.get('r')
@@ -399,11 +405,12 @@ def htmlText(t: Text) -> str:
     start.append('<u>'); end.append('</u>')
   if a.is_strike():
     start.append('<s>'); end.append('</s>')
-  htmlCode(start, end, t)
   htmlRef(start, end, t)
-
-  text = '<p>'.join(t.body.split('\n'))
-  return ''.join(start) + text + ''.join(end)
+  if htmlCode(start, end, t):
+    text = pyHtml.escape(t.body)
+  else:
+    text = '<p>'.join(pyHtml.escape(i) for i in t.body.split('\n'))
+  return tx(start) + text + tx(end)
 
 def _htmlCont(cont: Cont):
   start = []; end = []
@@ -413,7 +420,7 @@ def _htmlCont(cont: Cont):
     if isinstance(el, Text): out.append(htmlText(el))
     else                   : out.append(htmlCont(el))
 
-  return '>' + ''.join(start) + ''.join(out) + ''.join(end)
+  return '>' + tx(start) + tx(out) + tx(end)
 
 def liIsOrdered(c: CAttrs):
   if c.is_star():    return False
@@ -435,7 +442,7 @@ def htmlList(cont: Cont):
     if ordered: ls = f'<li value="{li.attrs["value"]}"'
     else:       ls = f'<li'
     out.append(ls + _htmlCont(li) + '</li>')
-  return start + ''.join(out) + end
+  return start + tx(out) + end
 
 def htmlCont(cont: Cont) -> str:
   c = cont.cAttrs
