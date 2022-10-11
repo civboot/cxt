@@ -239,12 +239,20 @@ class Parser:
     self.unrecurse(s)
 
   def startBullet(self, l, token):
+    if not token: return
     self.handleBody()
-    if token:
-      attrs = {'item': token.decode('utf-8')}
-      c = CAttrs(0); c.set_lItem()
-      l.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
-      self.s.out = []
+    c = CAttrs(0)
+    attrs = {}
+    if token == b'*':   c.set_star()
+    elif token == b'[ ]': c.set_nochk()
+    elif token == b'[X]': c.set_chk()
+    elif ord('0') <= token[0] <= ord('9'):
+      c.set_num()
+      attrs['value'] = token.decode('utf-8')
+    else: assert False, f"unreachable: {token}"
+
+    l.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
+    self.s.out = []
 
   def parseList(self, cmd):
     prevS = self.recurse(ParserState(
@@ -315,3 +323,74 @@ class Parser:
       close, pg = self.parseLine(pg)
       if close: return
     self.handleBody()
+    return self.s.out
+
+
+def parse(b: bytes) -> list:
+  p = Parser(b)
+  out = p.parse()
+  if out is None: raise ValueError("Unexpected [/]")
+  return out
+
+
+def htmlText(t: Text) -> str:
+  a = t.tAttrs
+  start = []
+  end = []
+  if a.is_b():
+    start.append('<b>'); end.append('</b>')
+  if a.is_i():
+    start.append('<i>'); end.append('</i>')
+  if a.is_u():
+    start.append('<u>'); end.append('</u>')
+  if a.is_strike():
+    start.append('<s>'); end.append('</s>')
+  if a.is_code():
+    start.append('<code>'); end.append('</code>')
+  text = '<br>'.join(t.body.split('\n'))
+  return ''.join(start) + text + ''.join(end)
+
+def _htmlCont(cont: Cont):
+  out = []
+  for el in cont.arr:
+    if isinstance(el, Text): out.append(htmlText(el))
+    else                   : out.append(htmlCont(el))
+  return '>' + ''.join(out)
+
+def liIsOrdered(c: CAttrs):
+  if c.is_star():    return False
+  elif c.is_num():   return True
+  elif c.is_nochk(): return False
+  elif c.is_chk():   return False
+  else: assert False, f'unexpected: {li}'
+
+def htmlList(cont: Cont):
+  out = []
+  if not cont.arr: return
+  ordered = liIsOrdered(cont.arr[0].cAttrs)
+  if ordered: start = '<ol>'; end = '</ol>'
+  else:       start = '<ul>'; end = '</ul>'
+
+  for li in cont.arr:
+    if liIsOrdered(li.cAttrs) != ordered:
+      raise ValueError(f"change in ordering: {li}")
+    if ordered: ls = f'<li value="{li.attrs["value"]}"'
+    else:       ls = f'<li'
+    out.append(ls + _htmlCont(li) + '</li>')
+  return start + ''.join(out) + end
+
+def htmlCont(cont: Cont) -> str:
+  c = cont.cAttrs
+  if c.is_t() : return '<span' + _htmlCont(cont) + '</span>'
+  if c.is_h1(): return '<h1'  + _htmlCont(cont) + '</h1>'
+  if c.is_h2(): return '<h2'  + _htmlCont(cont) + '</h2>'
+  if c.is_h3(): return '<h3'  + _htmlCont(cont) + '</h3>'
+  if c.is_list(): return htmlList(cont)
+
+
+def html(els: list[El]):
+  out = []
+  for el in els:
+    if isinstance(el, Text): out.append(htmlText(el))
+    else:                    out.append(htmlCont(el))
+  return out

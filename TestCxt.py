@@ -9,10 +9,14 @@ ABold = TAttrs(0); ABold.set_b()
 AItalic = TAttrs(0); AItalic.set_i()
 
 CList  = CAttrs(0); CList.set_list()
-CLItem = CAttrs(0); CLItem.set_lItem()
+CStar  = CAttrs(0); CStar.set_star()
+CNum   = CAttrs(0); CNum.set_num()
+CNochk = CAttrs(0); CNochk.set_nochk()
+CChk   = CAttrs(0); CChk.set_chk()
 
-def li(arr, cAttrs=CLItem, item = '*'):
-  return Cont(arr, cAttrs, {'item': item})
+def li(arr, cAttrs = CStar, attrs = None):
+  attrs = attrs or {}
+  return Cont(arr, cAttrs, attrs)
 
 def cList(arr, cAttrs=CList, attrs=None):
   attrs = attrs or {}
@@ -85,8 +89,7 @@ class TestParser(unittest.TestCase):
 
   def testTextBlock(self):
     p = Parser(b'plain [b]bold [t a=foo]foo[/]\nmore bold[b] some plain')
-    p.parse()
-    o = p.s.out; assert len(o) == 5
+    o = p.parse(); assert len(o) == 5
     assert o[0] == text(b'plain ')
     assert o[1] == text(b'bold ', ABold)
     assert o[2] == text(b'foo', ABold, {b'a': b'foo'})
@@ -122,6 +125,22 @@ class TestParser(unittest.TestCase):
     assert c.arr[0] == li([text(b'item1 continued.')])
     expected = li([text(b'item2\nmultiline.')])
     assert c.arr[1] == expected
+
+class TestHtml(unittest.TestCase):
+  def testText(self):
+    p = Parser(b'plain `some code` [b]bold[b] plain [## a=foo]more code[##]')
+    o = p.parse()
+    result = ''.join(html(o))
+    expected = 'plain <code>some code</code> <b>bold</b> plain <code>more code</code>'
+    assert expected == result
+
+  def testList(self):
+    o = parse( b'''[+]
+    * item1
+    * item2[/]''')
+    result = ''.join(html(o))
+    expected = '<ul><li>item1</li><li>item2</li></ul>'
+
 
 if __name__ == '__main__':
   unittest.main()
