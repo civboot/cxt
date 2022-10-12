@@ -154,6 +154,12 @@ class TestParser(unittest.TestCase):
     expected = li([text('item2\nmultiline.')])
     assert c.arr[1] == expected
 
+  def testLiterals(self):
+    o = parse('[] [`] [[ ]]')
+    print(o)
+    assert len(o) == 1
+    assert o[0] == text(' ` [ ]')
+
 class TestHtml(unittest.TestCase):
   def testText(self):
     p = Parser('plain `some code` [b]bold[b] plain [## a=foo]more code[##]')

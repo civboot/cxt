@@ -133,9 +133,14 @@ An empty brackets like [] does nothing.
 []   This is useful for leading whitespace.
 [###]
 
-Renders as:
+[b]Renders as:[b]
 
-FIXME: fix this
+This is a backtick: [`]
+
+Doubling a bracket escapes it. [[ This is in literal brackets ]]
+
+An empty brackets like [] does nothing.
+[]   This is useful for leading whitespace.
 
 [###]
 (not implemented)

@@ -192,10 +192,12 @@ class Parser:
 
   def parseCmd(self):
     name = self.cmdToken()
+    if name == '[': return self.newCmd(name)
     if name == ']': return self.newCmd('')  # []
     self.checkCmdToken(name)
 
     cmd = self.newCmd(name)
+    if name == '[': return cmd
     name = None
     while True:
       if not name:     name = self.cmdToken()
@@ -381,7 +383,7 @@ class Parser:
     else: self.error(f"Unknown cmd: {cmd}")
 
   def parseCloseBracket(self):
-    self.checkEof(self.i < len(self.buf))
+    self.checkEof(self.i < len(self.buf), 'second ]')
     c = self.buf[self.i]
     if c == ']':
       self.body.append(c)
@@ -393,6 +395,7 @@ class Parser:
 
     Returns: closed, pg
     """
+    gotCloseBracket = False
     while self.notEof():
       c = self.buf[self.i]
       self.i += 1
@@ -412,8 +415,8 @@ class Parser:
       elif c == '@': self.parseGet(self.newCmd('@'))
       elif c == '[':
         cmd = self.parseCmd()
-        if cmd.name == '/':
-          return (True, pg)
+        if cmd.name == '[': self.body.append(c); continue
+        if cmd.name == '/': return (True, pg)
         newPg = self.doCmd(cmd)
         if newPg is not None: pg = newPg
       elif c == ']': self.parseCloseBracket()

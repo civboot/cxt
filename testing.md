@@ -110,7 +110,9 @@ Doubling a bracket escapes it. [[ This is in literal brackets ]]
 An empty brackets like [] does nothing.
 []   This is useful for leading whitespace.
 </pre>
-<p>Renders as:<p>FIXME: fix this<p>
+<p>
+<b>Renders as:</b>
+<p>This is a backtick: `<p>Doubling a bracket escapes it. [ This is in literal brackets ]<p>An empty brackets like  does nothing.    This is useful for leading whitespace.<p>
 <pre>
 (not implemented)
 Empty brackets at the end of the line
