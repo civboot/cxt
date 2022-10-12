@@ -18,164 +18,75 @@ cxt enables (for example) writing a command line utility&#x27;s documentation as
 
 <h2>Example</h2>
 <b>Inline code:</b>
+<p>
+<pre>Some `inline code`, more [#]inline code[#].<br></pre>
 <p>Some 
 <code>inline code</code>
 , more 
 <code>inline code</code>
-. 
-<pre>
-Some `inline code`, more [#]inline code[#].
-</pre>
-<p>
+.<p>
 <b>Formatting:</b>
+<p>
+<pre>This sentance has [b]bold[b] text, [i]italic[i] text, and<br>[b][i]bold italic[i][b] text.<br></pre>
 <p>This sentance has 
 <b>bold</b>
  text, 
 <i>italic</i>
  text, and 
 <b><i>bold italic</b></i>
- text. 
-<pre>
-This sentance has [b]bold[b] text, [i]italic[i] text, and
-[b][i]bold italic[i][b] text.
-</pre>
-<p>
+ text.<p>
 <b>Linking:</b>
+<p>
+<pre>A url to [t r=http://civboot.org]CivBoot[/],<br>or displaying and linking the full url:<br>[r]http://civboot.org[/]<br><br>Alternatively, you can use set/get: @CivBoot<br><br>You can even use [@] for attributes like `r` (ref),<br>i.e. [t r=@civbootUrl]check out civboot![/]<br><br>[t set=CivBoot r=https://civboot.org]CivBoot[/]<br>[r set=civbootUrl]http://civboot.org[/]<br></pre>
 <p>A url to 
 <span><a href="http://civboot.org">CivBoot</a></span>
 , or displaying and linking the full url: 
 <span><a href="http://civboot.org">http://civboot.org</a></span>
 <p>Alternatively, you can use set/get: 
 <span><a href="https://civboot.org">CivBoot</a></span>
+<p>You can even use @ for attributes like 
+<code>r</code>
+ (ref), i.e. 
+<span><a href="http://civboot.org">check out civboot!</a></span>
 <p>
-<pre>
-A url to [t r=http://civboot.org]CivBoot[/], or displaying and linking the
-full url: [r]http://civboot.org[/]
 
-[t set=CivBoot r=https://civboot.org]CivBoot[/]
-</pre>
-<p>
 <b>Lists:</b>
+<p>
 <ul><li>bullet point</li><li>second bullet point</li></ul>
-<pre>
-[+]
- * bullet point
- * second bullet point
-[/]
-</pre>
+<pre>[+]<br> * bullet point<br> * second bullet point<br>[/]<br></pre>
 <p>
-<pre>
-TODO: fix numbered lists
-
-[b]Numbered Lists:[b][+]
- 1. first item
- 2. second item
-[/]
-
-[+]
- 1. first item
- 2. second item
-[/]
-</pre>
+<b>Numbered Lists:</b>
+<p>TODO: fix numbered lists<p>
+<pre>[+]<br> 1. first item<br> 2. second item<br>[/]<br><br>[+]<br> 1. first item<br> 2. second item<br>[/]<br></pre>
 <p>
-<b>Indented Lists:</b>
-<ul><li>Bullet point <ul><li>sub bullet point</li></ul></li><li>second bullet point</li></ul>
-<pre>
-[+]
- * Bullet point [+]
-   * sub bullet point
- [/]
- * second bullet point
-[/]
-</pre>
+<b>Sub Lists:</b>
 <p>
+<pre>[+]<br> * Bullet point [+]<br>   * Sub bullet point<br> [/]<br> * Second bullet point<br>[/]<br></pre>
+<p>
+<ul><li>Bullet point <ul><li>Sub bullet point</li></ul></li><li>Second bullet point</li></ul>
 <b>Checkboxes:</b>
  (not yet implemented) 
-<pre>
-[+]
- [X] done item
- [ ] undone item [+]
-   [X] indended done item
-   [ ] indended undone item
- [/]
-[/]
-</pre>
+<pre>[+]<br> [X] done item<br> [ ] undone item [+]<br>   [X] indended done item<br>   [ ] indended undone item<br> [/]<br>[/]<br></pre>
 <p>
 <h2>Special Character Escapes</h2>
-<pre>
-This is a backtick: [`]
-
-Doubling a bracket escapes it. [[ This is in literal brackets ]]
-
-An empty brackets like [] does nothing.
-[]   This is useful for leading whitespace.
-</pre>
+<pre>This is a backtick: [`]<br><br>Doubling a bracket escapes it. [[ This is in literal brackets ]]<br><br>An empty brackets like &quot;[]&quot; does nothing.<br>[]   This is useful for leading whitespace.<br></pre>
 <p>
 <b>Renders as:</b>
-<p>This is a backtick: `<p>Doubling a bracket escapes it. [ This is in literal brackets ]<p>An empty brackets like  does nothing.    This is useful for leading whitespace.<p>
-<pre>
-(not implemented)
-Empty brackets at the end of the line
-cause it to continue.
-This is useful for very-very-very-very-very-[
-]very long words.
-</pre>
+<p>This is a backtick: `<p>Doubling a bracket escapes it. [ This is in literal brackets ]<p>An empty brackets like &quot;&quot; does nothing.    This is useful for leading whitespace.<p>
+<pre>Empty brackets at the end of the line<br>cause it to continue.<br>This is useful for very-very-very-very-very-[<br>]very long words.<br>(notice: no spaces before last &quot;very&quot;)<br></pre>
 <p>
-<h2>Code Blocks</h2>
-Code blocks use 
-<code>[#...]</code>
-<p>
-<pre>
-[#]
-This is a code
-block.
-   It can have multiple lines and whitespace.
-[#]
-
-[###]
-Using more #&#x27;s allows for [#] or even [##].
-
-[ ### ] (minus spaces) ends the code block.
-[###]
-
-</pre>
-<p>
+<b>Renders as:</b>
+<p>Empty brackets at the end of the line cause it to continue. This is useful for very-very-very-very-very-very long words. (notice: no spaces before last &quot;very&quot;)<p>
 <h2>Non-rendered blocks (not yet implemented)</h2>
-<pre>
-[!]this is a comment and is not rendered[/]
-
-Any block can end in ! and it will be &quot;hidden&quot;
-so you can do:
-
-[### myAttr=foo !]
-this is a code block with myAttr=foo.
-Code blocks are especially useful for this, since
-they can contain configuration, code to run, etc.
-[###]
-</pre>
+<pre>[!]this is a comment and is not rendered[/]<br><br>Any block can end in ! and it will be &quot;hidden&quot;<br>so you can do:<br><br>[### myAttr=foo !]<br>this is a code block with myAttr=foo.<br>Code blocks are especially useful for this, since<br>they can contain configuration, code to run, etc.<br>[###]<br></pre>
 <p>
 <h2>Table (not yet implemented)</h2>
-<pre>
-[table]
-[h] Col1 | Col2 | Col3 [/]
-[r] a1   | a2   | a3   [/]
-[r] multi| b2   | b3
-    line |      |
-    row  |      |      [/]
-[/]
-</pre>
+<pre>[table]<br>[h] Col1 | Col2 | Col3 [/]<br>[r] a1   | a2   | a3   [/]<br>[r] multi| b2   | b3<br>    line |      |<br>    row  |      |      [/]<br>[/]<br></pre>
 <p>
 <ul><li>The delimiter can be specified with <code>del</code>. Example: <code>[table del=;]</code></li><li>Cell values are stipped (leading/trailing whitespace removed). If you want to force it, you can use <code>[t] my cell value [/]</code></li></ul>
 <h2>Full List of Brackets</h2>
 Special characters 
-<pre>
- [[   literal open bracket
- ]]   literal close bracket
- [`]  literal backtick
- `inline code` (same as markdown)
- [c]inline code[c]
- [#...]inline code[#...]
-</pre>
+<pre> [[   literal open bracket<br> ]]   literal close bracket<br> [`]  literal backtick<br> `inline code` (same as markdown)<br> [c]inline code[c]<br> [#...]inline code[#...]<br></pre>
 <p>Other literals:
 <ul><li><code>[n]</code> literal newline <code>\n</code></li><li><code>[s]</code> literal space character (used rarely)</li><li><code>[]</code> ignored (sometimes used if leading spaces ignored, i.e. in lists)</li></ul>
 Text markup state: these toggle the current text state (not turned off with 
@@ -190,33 +101,9 @@ Attributes are added in
 <ul><li><code>!</code> at end causes item to be &quot;hidden&quot;</li><li>mark: attribute which creates a mark that can be linked <code>[l]</code> to.</li><li>r: works like <code>[r]</code> but can be used like: <code>[t r=foo]...[/]</code></li><li>otherwise it is a &quot;custom&quot; attribute, some tools process these (i.e. <code>lang</code> for code, etc)</li></ul>
 <h2>Contributing</h2>
 When opening a PR to submit code to this repository you must include the following disclaimer in your first commit message:<p>
-<pre>
-I &lt;author&gt; assent to license this and all future contributions to this project
-under the dual licenses of the UNLICENSE or MIT license listed in the
-`UNLICENSE` and `README.md` files of this repository.
-</pre>
+<pre>I &lt;author&gt; assent to license this and all future contributions to this project<br>under the dual licenses of the UNLICENSE or MIT license listed in the<br>`UNLICENSE` and `README.md` files of this repository.<br></pre>
 <p>
 <h2>LICENSING</h2>
 This work is part of the Civboot project and therefore primarily exists for educational purposes. Attribution to the authors and project is appreciated but not necessary.<p>Therefore this body of work is licensed using the UNLICENSE unless otherwise specified at the beginning of the source file.<p>If for any reason the UNLICENSE is not valid in your jurisdiction or project, this work can be singly or dual licensed at your discression with the MIT license below.<p>
-<pre>
-Copyright 2021 Garrett Berg
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the &quot;Software&quot;), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-</pre>
+<pre>Copyright 2021 Garrett Berg<br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of<br>this software and associated documentation files (the &quot;Software&quot;), to deal in<br>the Software without restriction, including without limitation the rights to<br>use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies<br>of the Software, and to permit persons to whom the Software is furnished to do<br>so, subject to the following conditions:<br><br>The above copyright notice and this permission notice shall be included in all<br>copies or substantial portions of the Software.<br><br>THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE<br>SOFTWARE.<br></pre>
 </div>

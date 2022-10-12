@@ -39,37 +39,58 @@ and injesting that to generate code for the args structure of a program.
 
 [h2]Example[/]
 
+
 [b]Inline code:[b]
 
-Some `inline code`, more [#]inline code[#].
 [###]
 Some `inline code`, more [#]inline code[#].
 [###]
+
+Some `inline code`, more [#]inline code[#].
+
 
 [b]Formatting:[b]
 
-This sentance has [b]bold[b] text, [i]italic[i] text, and
-[b][i]bold italic[i][b] text.
 [###]
 This sentance has [b]bold[b] text, [i]italic[i] text, and
 [b][i]bold italic[i][b] text.
 [###]
+
+This sentance has [b]bold[b] text, [i]italic[i] text, and
+[b][i]bold italic[i][b] text.
+
 
 [b]Linking:[b]
 
-A url to [t r=http://civboot.org]CivBoot[/], or displaying and linking the
-full url: [r]http://civboot.org[/]
+[###]
+A url to [t r=http://civboot.org]CivBoot[/],
+or displaying and linking the full url:
+[r]http://civboot.org[/]
 
 Alternatively, you can use set/get: @CivBoot
 
-[###]
-A url to [t r=http://civboot.org]CivBoot[/], or displaying and linking the
-full url: [r]http://civboot.org[/]
+You can even use [@] for attributes like `r` (ref),
+i.e. [t r=@civbootUrl]check out civboot![/]
 
 [t set=CivBoot r=https://civboot.org]CivBoot[/]
+[r set=civbootUrl]http://civboot.org[/]
 [###]
 
-[b]Lists:[b][+]
+A url to [t r=http://civboot.org]CivBoot[/],
+or displaying and linking the full url:
+[r]http://civboot.org[/]
+
+Alternatively, you can use set/get: @CivBoot
+
+You can even use [@] for attributes like `r` (ref),
+i.e. [t r=@civbootUrl]check out civboot![/]
+
+[r set=civbootUrl]http://civboot.org[/]
+
+
+[b]Lists:[b]
+
+[+]
  * bullet point
  * second bullet point
 [/]
@@ -81,10 +102,14 @@ full url: [r]http://civboot.org[/]
 [/]
 [###]
 
-[###]
+
+
+[b]Numbered Lists:[b]
+
 TODO: fix numbered lists
 
-[b]Numbered Lists:[b][+]
+[###]
+[+]
  1. first item
  2. second item
 [/]
@@ -95,21 +120,24 @@ TODO: fix numbered lists
 [/]
 [###]
 
-[b]Indented Lists:[b][+]
- * Bullet point [+]
-   * sub bullet point
- [/]
- * second bullet point
-[/]
+[b]Sub Lists:[b]
 
 [###]
 [+]
  * Bullet point [+]
-   * sub bullet point
+   * Sub bullet point
  [/]
- * second bullet point
+ * Second bullet point
 [/]
 [###]
+
+[+]
+ * Bullet point [+]
+   * Sub bullet point
+ [/]
+ * Second bullet point
+[/]
+
 
 [b]Checkboxes:[b] (not yet implemented)
 [###]
@@ -129,7 +157,7 @@ This is a backtick: [`]
 
 Doubling a bracket escapes it. [[ This is in literal brackets ]]
 
-An empty brackets like [] does nothing.
+An empty brackets like "[]" does nothing.
 []   This is useful for leading whitespace.
 [###]
 
@@ -139,34 +167,24 @@ This is a backtick: [`]
 
 Doubling a bracket escapes it. [[ This is in literal brackets ]]
 
-An empty brackets like [] does nothing.
+An empty brackets like "[]" does nothing.
 []   This is useful for leading whitespace.
 
 [###]
-(not implemented)
 Empty brackets at the end of the line
 cause it to continue.
 This is useful for very-very-very-very-very-[
 ]very long words.
+(notice: no spaces before last "very")
 [###]
 
-[h2]Code Blocks[/]
-Code blocks use `[#...]`
+[b]Renders as:[b]
 
-[####]
-[#]
-This is a code
-block.
-   It can have multiple lines and whitespace.
-[#]
-
-[###]
-Using more #'s allows for [#] or even [##].
-
-[ ### ] (minus spaces) ends the code block.
-[###]
-
-[####]
+Empty brackets at the end of the line
+cause it to continue.
+This is useful for very-very-very-very-very-[
+]very long words.
+(notice: no spaces before last "very")
 
 [h2]Non-rendered blocks (not yet implemented)[/]
 [####]

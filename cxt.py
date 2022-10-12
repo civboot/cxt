@@ -156,7 +156,7 @@ class Parser:
       if self.parse() is None:
         break
 
-  def cmdToken(self, alnum=False):
+  def cmdToken(self, alnum=False, name=False):
     """Get a token inside of command blocks.
 
     - This is normally a string without whitespace: 'foo-bar'
@@ -164,10 +164,12 @@ class Parser:
     - TODO: It can also be `foo bar` or [#]foo bar[#]
     """
     token = []
-    while self.notEof():
+    while True:
+      self.checkEof(self.notEof(), "]")
       c = self.buf[self.i]
       self.i += 1
       if len(token) == 0:
+        if name and c == '\n': return '\n'
         if c <= ' ': continue # skip whitespace
         if c in TOKEN_SPECIAL:
           token.append(c)
@@ -191,7 +193,7 @@ class Parser:
       if t == ']': self.error("Did not expect: ']'")
 
   def parseCmd(self):
-    name = self.cmdToken()
+    name = self.cmdToken(name=True)
     if name == '[': return self.newCmd(name)
     if name == ']': return self.newCmd('')  # []
     self.checkCmdToken(name)
@@ -380,6 +382,7 @@ class Parser:
     elif cmd.name == 's':  self.body.append(' ')
     elif cmd.name == '`':  self.body.append('`')
     elif cmd.name == '@':  self.body.append('@')
+    elif cmd.name == '\n': pass
     else: self.error(f"Unknown cmd: {cmd}")
 
   def parseCloseBracket(self):
@@ -468,6 +471,8 @@ def htmlText(t: Text) -> str:
   htmlRef(start, end, t)
   if htmlCode(start, end, t):
     text = pyHtml.escape(t.body)
+    if text[0] == '\n': text = text[1:]
+    text = '<br>'.join(text.split('\n'))
   else:
     text = '<p>'.join(pyHtml.escape(i) for i in t.body.split('\n'))
   return tx(start) + text + tx(end)

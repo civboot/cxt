@@ -130,6 +130,14 @@ class TestParser(unittest.TestCase):
     assert c.arr[0] == li([text('item1')])
     assert c.arr[1] == li([text('item2')])
 
+  def testNumList(self):
+    o = parse('[+]\n  1. hi\n  2. holla\n  3. hallo\n[/]')
+    assert len(o) == 1
+    a = o[0].arr
+    assert len(a) == 3
+    assert a[0] == li([text('hi')])
+    assert a[1] == li([text('holla')])
+
   def testQuote(self):
     o = parse('''["]This is a quote[/]''')
     assert len(o) == 1;
@@ -155,10 +163,10 @@ class TestParser(unittest.TestCase):
     assert c.arr[1] == expected
 
   def testLiterals(self):
-    o = parse('[] [`] [[ ]]')
+    o = parse('[] [`] [[ ]] [\n][@]foo')
     print(o)
     assert len(o) == 1
-    assert o[0] == text(' ` [ ]')
+    assert o[0] == text(' ` [ ] @foo')
 
 class TestHtml(unittest.TestCase):
   def testText(self):
