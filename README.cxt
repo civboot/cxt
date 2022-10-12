@@ -1,5 +1,8 @@
 [h1]cxt: text markup for civilization[/]
 
+["][b]Note:[b] This file is created using cxt. To see the source view
+   README.cxt in this directory.[/]
+
 It should not take more than a few minutes to know how to read and write
 documentation.
 
@@ -26,7 +29,7 @@ and injesting that to generate code for the args structure of a program.
   [X] quotes (markdown `>`)
   [X] set/get "variables"
   [X] checkboxes
-  [ ] comments (`!`)
+  [X] comments (`!`)
   [ ] parsing tables
 [/]
 
@@ -296,7 +299,7 @@ this work can be singly or dual licensed at your discression with the MIT
 license below.
 
 [###]
-Copyright 2021 Garrett Berg
+Copyright 2022 Garrett Berg
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
