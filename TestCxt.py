@@ -13,6 +13,7 @@ CStar  = CAttrs(0); CStar.set_star()
 CNum   = CAttrs(0); CNum.set_num()
 CNochk = CAttrs(0); CNochk.set_nochk()
 CChk   = CAttrs(0); CChk.set_chk()
+CHide  = CAttrs(0); CHide.set_hide()
 
 def li(arr, cAttrs = CStar, attrs = None):
   attrs = attrs or {}
@@ -166,6 +167,12 @@ class TestParser(unittest.TestCase):
     assert len(o) == 1
     assert o[0] == text(' ` [ ] @foo')
 
+  def testHide(self):
+    o = parse('[t !]hidden[/]Some text')
+    assert len(o) == 2
+    assert o[0] == Cont([text("hidden")], CHide, {})
+    assert o[1] == text('Some text')
+
 class TestHtml(unittest.TestCase):
   def testText(self):
     p = Parser('plain `some code` [b]bold[b] plain [## a=foo]more code[##]')
@@ -209,7 +216,8 @@ class TestHtml(unittest.TestCase):
     [X] item1
     [ ] item2[/]''')
     result = ''.join(html(o))
-    expected = '<ul><li>✅ item1</li><li>✅ item2</li></ul>'
+    expected = '<ul><li>✅ item1</li><li>🔲 item2</li></ul>'
+    assert expected == result
 
   def testQuote(self):
     o = parse('''["]This is a [b]quote[b][/]''')
@@ -246,6 +254,11 @@ class TestHtml(unittest.TestCase):
     )
     assert expected == result
 
+  def testHide(self):
+    o = parse('[t !]hidden[/]some text')
+    result = ''.join(html(o))
+    expected = 'some text'
+    assert expected == result
 
 if __name__ == '__main__':
   unittest.main()

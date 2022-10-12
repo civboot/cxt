@@ -66,21 +66,21 @@ cxt enables (for example) writing a command line utility&#x27;s documentation as
 <p>
 <ul><li>Bullet point <ul><li>Sub bullet point</li></ul></li><li>Second bullet point</li></ul>
 <b>Checkboxes:</b>
- (not yet implemented) 
-<pre>[+]<br> [X] done item<br> [ ] undone item [+]<br>   [X] indended done item<br>   [ ] indended undone item<br> [/]<br>[/]<br></pre>
+<p>
+<pre>[+]<br> [X] done item<br> [ ] undone item [+]<br>   [X] indented done item<br>   [ ] indented undone item<br> [/]<br>[/]<br></pre>
+<p>
+<ul><li>✅ done item</li><li>🔲 undone item <ul><li>✅ indended done item</li><li>🔲 indended undone item</li></ul></li></ul>
+<b>Developer-only Comments</b>
+<p>
+<pre>The following comment is not rendered...<br>[t !]Any block with a ! attr is a comment.[/]<br></pre>
+<p>The following comment is not rendered... 
+
 <p>
 <h2>Special Character Escapes</h2>
 <pre>This is a backtick: [`]<br><br>Doubling a bracket escapes it. [[ This is in literal brackets ]]<br><br>An empty brackets like &quot;[]&quot; does nothing.<br>[]   This is useful for leading whitespace.<br></pre>
-<p>
-<b>Renders as:</b>
 <p>This is a backtick: `<p>Doubling a bracket escapes it. [ This is in literal brackets ]<p>An empty brackets like &quot;&quot; does nothing.    This is useful for leading whitespace.<p>
 <pre>Empty brackets at the end of the line<br>cause it to continue.<br>This is useful for very-very-very-very-very-[<br>]very long words.<br>(notice: no spaces before last &quot;very&quot;)<br></pre>
-<p>
-<b>Renders as:</b>
 <p>Empty brackets at the end of the line cause it to continue. This is useful for very-very-very-very-very-very long words. (notice: no spaces before last &quot;very&quot;)<p>
-<h2>Non-rendered blocks (not yet implemented)</h2>
-<pre>[!]this is a comment and is not rendered[/]<br><br>Any block can end in ! and it will be &quot;hidden&quot;<br>so you can do:<br><br>[### myAttr=foo !]<br>this is a code block with myAttr=foo.<br>Code blocks are especially useful for this, since<br>they can contain configuration, code to run, etc.<br>[###]<br></pre>
-<p>
 <h2>Table (not yet implemented)</h2>
 <pre>[table]<br>[h] Col1 | Col2 | Col3 [/]<br>[r] a1   | a2   | a3   [/]<br>[r] multi| b2   | b3<br>    line |      |<br>    row  |      |      [/]<br>[/]<br></pre>
 <p>

@@ -140,8 +140,18 @@ i.e. [t r=@civbootUrl]check out civboot![/]
 [/]
 
 
-[b]Checkboxes:[b] (not yet implemented)
+[b]Checkboxes:[b]
+
 [###]
+[+]
+ [X] done item
+ [ ] undone item [+]
+   [X] indented done item
+   [ ] indented undone item
+ [/]
+[/]
+[###]
+
 [+]
  [X] done item
  [ ] undone item [+]
@@ -149,7 +159,17 @@ i.e. [t r=@civbootUrl]check out civboot![/]
    [ ] indended undone item
  [/]
 [/]
+
+[b]Developer-only Comments[b]
+
 [###]
+The following comment is not rendered...
+[t !]Any block with a ! attr is a comment.[/]
+[###]
+
+The following comment is not rendered...
+[t !]Any block with a ! attr is a comment.[/]
+
 
 [h2]Special Character Escapes[/]
 
@@ -162,8 +182,6 @@ An empty brackets like "[]" does nothing.
 []   This is useful for leading whitespace.
 [###]
 
-[b]Renders as:[b]
-
 This is a backtick: [`]
 
 Doubling a bracket escapes it. [[ This is in literal brackets ]]
@@ -179,27 +197,12 @@ This is useful for very-very-very-very-very-[
 (notice: no spaces before last "very")
 [###]
 
-[b]Renders as:[b]
-
 Empty brackets at the end of the line
 cause it to continue.
 This is useful for very-very-very-very-very-[
 ]very long words.
 (notice: no spaces before last "very")
 
-[h2]Non-rendered blocks (not yet implemented)[/]
-[####]
-[!]this is a comment and is not rendered[/]
-
-Any block can end in ! and it will be "hidden"
-so you can do:
-
-[### myAttr=foo !]
-this is a code block with myAttr=foo.
-Code blocks are especially useful for this, since
-they can contain configuration, code to run, etc.
-[###]
-[####]
 
 [h2]Table (not yet implemented)[/]
 

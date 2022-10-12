@@ -8,8 +8,6 @@ bitmap TAttrs [
   b        0x040  \ bold
   u        0x080  \ underline
   strike   0x100  \ '~' strikethrough
-
-  hide    0x8000  \ '!'
 ]
 
 bitmap CAttrs [

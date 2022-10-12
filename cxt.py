@@ -205,8 +205,8 @@ class Parser:
       if not name:     name = self.cmdToken()
       if name == ']': break
       if name == '!':
-          self.tAttrs.set_hide()
-          self.cAttrs.set_hide()
+          cmd.cAttrs.set_hide()
+          name = None
           continue
       self.checkCmdToken(name)
 
@@ -259,7 +259,8 @@ class Parser:
       tAttrs=cmd.tAttrs,
       attrs={}))
     self.parse()
-    t = Cont(self.s.out, CText, attrs)
+    cmd.cAttrs.set_t()
+    t = Cont(self.s.out, cmd.cAttrs, attrs)
     prevS.out.append(t)
     self.unrecurse(prevS)
     if 'set' in t.attrs: return NOT_PG
@@ -460,7 +461,7 @@ def htmlRef(start, end, el):
 
 def htmlText(t: Text) -> str:
   a = t.tAttrs
-  if a.is_get() or a.is_hide(): return ''
+  if a.is_get(): return ''
   start = []
 
   end = []
