@@ -4,12 +4,12 @@ It should not take more than a few minutes to know how to read and write
 documentation.
 
 cxt is an ultra-simple markup language similar in spirit [BBCode], designed
-to be as easy as possible to parse while delivering any features necessary to
-the [Civboot] project.
+to be as easy as possible to parse (for computers _and_ humans) while delivering
+any features necessary to the [Civboot] project.
 
 cxt is designed to:
  * Make document writing easy.
- * Make document documents parsing easy.
+ * Make document document parsing easy.
  * Make reading of raw (text) documents easy.
  * Make consuming structured data from documents easy.
 
@@ -20,18 +20,24 @@ and injesting that to generate code for the args structure of a program.
 **This repository is WIP**. Current progress:
   - [X] parsing text
   - [X] parsing code
-  - [ ] parsing lists
-  - [ ] export above to html
+  - [X] parsing lists
+  - [X] export above to html or markdown-embedded html
+  - [ ] notes (markdown `>`)
+  - [ ] comments (`!`)
+  - [ ] checkboxes
   - [ ] parsing tables
 
-> cxt is pronounced _c-x-t_ or  _sext_, at your preference.
+> **cxt** is pronounced as either _C-X-T_ or _text_ with a 'c', at your
+> discression.
 
 [BBCode]: https://en.wikipedia.org/wiki/BBCode
 [Civboot]: https://civboot.org
 
 ## Example
 
-> See [Example.cxt][Example.cxt] and the output [Example.html][Example.html]
+> See also [Example.cxt](Example.cxt) and the output [Example.md](Example.md),
+>
+> which you can generate with: `python3 cxt.py Example.cxt Example.md`
 
 **Inline code:**
 
@@ -95,7 +101,7 @@ full url: [r]http://civboot.org[/]
 [/]
 ```
 
-**Checkboxes:**
+**Checkboxes:** (not yet implemented)
 ```
 [+]
  [X] done item
@@ -111,7 +117,23 @@ full url: [r]http://civboot.org[/]
 This is a backtick: [`]
 
 Doubling a bracket escapes it. [[ This is in literal brackets ]]
+
+An empty brackets like [] does nothing.
+[]   This is useful for leading whitespace.
+
+(not implemented)
+Empty brackets at the end of the line
+cause it to continue.
+This is useful for very-very-very-very-very-[
+]very long words.
 ```
+
+Renders as:
+
+> does nothing.    This is useful for leading whitespace.
+>
+> Empty brackets at the end of the line cause it to continue.  This is useful
+> for very-very-very-very-very-very long words.
 
 ## Code Blocks
 Code blocks use `[#...]`
@@ -130,7 +152,7 @@ Using more #'s allows for [#] or even [##] or [####]
 [###]
 ```
 
-## Non-rendered blocks
+## Non-rendered blocks (not yet implemented)
 ```
 [!]this is a comment and is not rendered[/]
 
@@ -143,6 +165,22 @@ Code blocks are especially useful for this, since
 they can contain configuration, code to run, etc.
 [###]
 ```
+
+## Table (not yet implemented)
+
+```
+[table]
+[h] Col1 | Col2 | Col3 [/]
+[r] a1   | a2   | a3   [/]
+[r] multi| b2   | b3
+    line |      |
+    row  |      |      [/]
+[/]
+```
+
+* The delimiter can be specified with `del`. Example: `[table del=;]`
+* Cell values are stipped (leading/trailing whitespace removed). If you want to
+  force it, you can use `[t] my cell value [/]`
 
 ## Full List of Brackets
 
