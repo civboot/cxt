@@ -22,7 +22,8 @@ and injesting that to generate code for the args structure of a program.
   - [X] parsing code
   - [X] parsing lists
   - [X] export above to html or markdown-embedded html
-  - [ ] notes (markdown `>`)
+  - [X] quotes (markdown `>`)
+  * [ ] set/get "variables"
   - [ ] comments (`!`)
   - [ ] checkboxes
   - [ ] parsing tables

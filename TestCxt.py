@@ -115,6 +115,12 @@ class TestParser(unittest.TestCase):
     assert c.arr[0] == li([text('item1')])
     assert c.arr[1] == li([text('item2')])
 
+  def testQuote(self):
+    o = parse('''["]This is a quote[/]''')
+    assert len(o) == 1;
+    expected = Cont([text("This is a quote")], CQuote, {})
+    assert expected == o[0]
+
   def testListNewline(self):
     p = Parser(
     '''* item1
@@ -161,6 +167,12 @@ class TestHtml(unittest.TestCase):
     * item2[/]''')
     result = ''.join(html(o))
     expected = '<ul><li>item1</li><li>item2</li></ul>'
+    assert expected == result
+
+  def testQuote(self):
+    o = parse('''["]This is a [b]quote[b][/]''')
+    result = ''.join(html(o))
+    expected = '<blockquote>This is a <b>quote</b></blockquote>'
     assert expected == result
 
   def testBlock(self):

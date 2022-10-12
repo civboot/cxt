@@ -36,10 +36,11 @@ RE_H = re.compile('h[123]')
 
 emptyAttrs = dict()
 
-CText = CAttrs(0); CText.set_t()
-CH1  = CAttrs(0); CH1.set_h1()
-CH2  = CAttrs(0); CH2.set_h2()
-CH3  = CAttrs(0); CH3.set_h3()
+CText  = CAttrs(0); CText.set_t()
+CH1    = CAttrs(0); CH1.set_h1()
+CH2    = CAttrs(0); CH2.set_h2()
+CH3    = CAttrs(0); CH3.set_h3()
+CQuote = CAttrs(0); CQuote.set_quote()
 
 def isCode(name): return RE_CODE.match(name)
 def isHdr(name):  return RE_H.match(name)
@@ -97,6 +98,9 @@ class Parser:
   skippedLines: int = 0
   skippedSpaces: int = 0
 
+  ####################
+  # Helpers
+
   def error(self, msg): raise zoa.ParseError(self.line, msg)
   def notEof(self): return self.i < len(self.buf)
   def checkEof(self, cond, s: str):
@@ -107,7 +111,13 @@ class Parser:
     found = self.buf[self.i]; self.i += 1
     if c != found: self.error(f'expected {chr(c)} found {chr(found)}.')
 
-  def recurse(self, newState):
+  def recurse(self, newState=None):
+    if newState is None:
+      newState = ParserState(
+        out=[],
+        tAttrs=self.s.tAttrs,
+        attrs=self.s.attrs)
+
     self.handleBody()
     self.recursion += 1
     prevState = self.s
@@ -138,6 +148,11 @@ class Parser:
       self.i += 1
     return out[:-len(b)]
 
+  def untilClose(self):
+    while True:
+      self.checkEof(self.notEof(), '[/]')
+      if self.parse() is None:
+        break
 
   def cmdToken(self):
     token = []
@@ -156,62 +171,31 @@ class Parser:
     self.checkEof(token, ']')
     return tx(token)
 
-  def listNum(self, token):
-    while self.notEof():
-      c = self.buf[self.i]; self.i += 1
-      if '0' <= c <= '9':
-        token.append(c)
-      elif c == '.':
-        return token
-      else:
-       self.s.out.extend(token)
-       self.s.out.append(c)
-       return ''
+  def newCmd(self, name):
+    return Cmd(name, TAttrs(self.s.tAttrs.value), CAttrs(0), dict())
 
-  def listBox(self):
-    c = self.buf[self.i]; self.i += 1
-    if   c == '/':             out = '[/]'
-    elif c == ' ':             out = '[ ]'
-    elif c in ('X', 'x'): out = '[X]'
-    else: self.i -= 2; return ''
-    self.expect(']')
-    return out
-
-  def listToken(self):
-    while True:
-      self.checkEof(self.notEof(), '[/]')
-      c = self.buf[self.i]; self.i += 1
-      if c == ' ': pass  # skip spaces
-      elif c == '*':        return '*'
-      elif '0' <= c <= '9': return numToken([c])
-      elif c == '[':        return self.listBox()
-      else: self.i -= 1; return ''
-
-  def _checkCmdToken(self, t):
+  def checkCmdToken(self, t):
       if t == '[': self.error("Did not expect: '['")
       if t == '=': self.error("Did not expect: '='")
       if t == ']': self.error("Did not expect: ']'")
 
-  def newCmd(self, name):
-    return Cmd(name, TAttrs(self.s.tAttrs.value), CAttrs(0), dict())
-
   def parseCmd(self):
     name = self.cmdToken()
     if name == ']': return self.newCmd('')  # []
-    self._checkCmdToken(name)
+    self.checkCmdToken(name)
 
     cmd = self.newCmd(name)
     name = None
     while True:
       if not name:     name = self.cmdToken()
       if name == ']': break
-      self._checkCmdToken(name)
+      self.checkCmdToken(name)
 
       t = self.cmdToken()
       if t == ']': break
       if t == '=':
         value = self.cmdToken()
-        self._checkCmdToken(value)
+        self.checkCmdToken(value)
         cmd.updateAttr(name, value)
         name = None  # get a new token for next name
       else:
@@ -219,13 +203,8 @@ class Parser:
         name = t     # reuse t as next name
     return cmd
 
-  def parseCloseBracket(self):
-    self.checkEof(self.i < len(self.buf))
-    c = self.buf[self.i]
-    if c == ']':
-      self.body.append(c)
-      self.i += 1
-    else: self.error("expected ']'")
+  ####################
+  # Element Parsers
 
   def parseCode(self, cmd):
     self.handleBody()
@@ -260,6 +239,64 @@ class Parser:
     a.update(cmd.attrs)
     a['r'] = ref
     self.s.out.append(Cont([text(ref)], CText, a))
+
+  def parseQuote(self, cmd):
+    prevS = self.recurse(ParserState(
+      out=[],
+      tAttrs=self.s.tAttrs,
+      attrs=self.s.attrs))
+    self.untilClose()
+    attrs = dict(self.s.attrs); attrs.update(cmd.attrs)
+    prevS.out.append(Cont(arr=self.s.out, cAttrs=CQuote, attrs=attrs))
+    self.unrecurse(prevS)
+
+  def parseHdr(self, cmd):
+    if   cmd.name == 'h1': c = CH1
+    elif cmd.name == 'h2': c = CH2
+    elif cmd.name == 'h3': c = CH3
+    else: self.error(f"Unknown header: {cmd.name}")
+    prevS = self.recurse(ParserState(
+      out=[],
+      tAttrs=self.s.tAttrs,
+      attrs=self.s.attrs))
+    self.untilClose()
+    attrs = dict(self.s.attrs); attrs.update(cmd.attrs)
+    prevS.out.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
+    self.unrecurse(prevS)
+
+  ####################
+  # List
+
+  def listNum(self, token):
+    while self.notEof():
+      c = self.buf[self.i]; self.i += 1
+      if '0' <= c <= '9':
+        token.append(c)
+      elif c == '.':
+        return token
+      else:
+       self.s.out.extend(token)
+       self.s.out.append(c)
+       return ''
+
+  def listBox(self):
+    c = self.buf[self.i]; self.i += 1
+    if   c == '/':             out = '[/]'
+    elif c == ' ':             out = '[ ]'
+    elif c in ('X', 'x'): out = '[X]'
+    else: self.i -= 2; return ''
+    self.expect(']')
+    return out
+
+  def listToken(self):
+    while True:
+      self.checkEof(self.notEof(), '[/]')
+      c = self.buf[self.i]; self.i += 1
+      if c == ' ': pass  # skip spaces
+      elif c == '*':        return '*'
+      elif '0' <= c <= '9': return numToken([c])
+      elif c == '[':        return self.listBox()
+      else: self.i -= 1; return ''
 
   def startBullet(self, l, token):
     if not token: return
@@ -299,25 +336,8 @@ class Parser:
     prevS.out.append(Cont(arr=l, cAttrs=c, attrs=cmd.attrs))
     self.unrecurse(prevS)
 
-  def parseHdr(self, cmd):
-    if   cmd.name == 'h1': c = CH1
-    elif cmd.name == 'h2': c = CH2
-    elif cmd.name == 'h3': c = CH3
-    else: self.error(f"Unknown header: {cmd.name}")
-    prevS = self.recurse(ParserState(
-      out=[],
-      tAttrs=self.s.tAttrs,
-      attrs=self.s.attrs))
-
-    while True:
-      self.checkEof(self.notEof(), '[/]')
-      if self.parse() is None:
-        break
-
-    attrs = dict(self.s.attrs)
-    attrs.update(cmd.attrs)
-    prevS.out.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
-    self.unrecurse(prevS)
+  ####################
+  # Top Level Parser
 
   def doCmd(self, cmd: Cmd) -> Pg:
     if not cmd.name: return  # ignore []
@@ -325,12 +345,21 @@ class Parser:
     elif cmd.name == 't': self.parseText(cmd)
     elif isChng(cmd.name): self.parseChng(cmd)
     elif cmd.name == '+': self.parseList(cmd); return NOT_PG
+    elif cmd.name == '"': self.parseQuote(cmd); return NOT_PG
     elif isHdr(cmd.name):  self.parseHdr(cmd);  return NOT_PG
     elif cmd.name == 'n': self.body.append('\n')
     elif cmd.name == 's': self.body.append(' ')
     elif cmd.name == '`': self.body.append('`')
     elif cmd.name == 'r': self.parseRef(cmd)
     else: self.error(f"Unknown cmd: {cmd}")
+
+  def parseCloseBracket(self):
+    self.checkEof(self.i < len(self.buf))
+    c = self.buf[self.i]
+    if c == ']':
+      self.body.append(c)
+      self.i += 1
+    else: self.error("expected ']'")
 
   def parseLine(self, pg: Pg):
     """Parse the remainder of a line or until an `[/]`
@@ -391,7 +420,6 @@ def htmlRef(start, end, el):
     start.append(f'<a href="{ref}">')
     end.append('</a>')
 
-
 def htmlText(t: Text) -> str:
   a = t.tAttrs
   start = []
@@ -451,6 +479,7 @@ def htmlCont(cont: Cont) -> str:
   if c.is_h2(): return '<h2'  + _htmlCont(cont) + '</h2>'
   if c.is_h3(): return '<h3'  + _htmlCont(cont) + '</h3>'
   if c.is_list(): return htmlList(cont)
+  if c.is_quote(): return '<blockquote' + _htmlCont(cont) + '</blockquote>'
 
 # TODO: not properly html-itizing text, leading to weird code blocks (among
 # other issues)
@@ -486,16 +515,14 @@ def main(args):
       f.write('<!DOCTYPE html>\n<html><body>\n')
       end.append('</body></html>\n')
     elif args.export.endswith('.md'):
-      f.write('<span>\n'); end.append('</span>')
+      f.write('<div>\n'); end.append('</div>')
     else: syserror(f"Unknown file type. Supported are: .html, .md")
 
     f.write(f'<!-- Generated by cxt.py from {args.path} -->\n')
     for l in h:
-      f.write(l)
-      f.write('\n')
+      f.write(l); f.write('\n')
     for l in end:
-      f.write(l)
-      f.write('\n')
+      f.write(l); f.write('\n')
     f.flush()
   print("Exported to:", args.export)
 
