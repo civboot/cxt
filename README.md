@@ -9,7 +9,7 @@ any features necessary to the [Civboot] project.
 
 cxt is designed to:
  * Make document writing easy.
- * Make document document parsing easy.
+ * Make document parsing easy.
  * Make reading of raw (text) documents easy.
  * Make consuming structured data from documents easy.
 

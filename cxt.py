@@ -4,6 +4,7 @@ Parses a `.cxt` file into python objects and provides mechanisms to export as
 HTML and view in the terminal.
 """
 
+import copy
 import argparse
 import os
 import re
@@ -33,8 +34,11 @@ CMD_BOOLEANS = ('b', 'i', '~')
 
 RE_CODE = re.compile('c|code|#+')
 RE_H = re.compile('h[123]')
+RE_ALNUM = re.compile('[0-9a-z_]', re.I)
 
 emptyAttrs = dict()
+
+TGet   = TAttrs(0); TGet.set_get()
 
 CText  = CAttrs(0); CText.set_t()
 CH1    = CAttrs(0); CH1.set_h1()
@@ -67,9 +71,7 @@ class Cmd:
 
   def updateAttr(self, attr, value):
     attr = tx(attr)
-    value = tx(value)
-    if attr == 'code': self.tAttrs.code = value
-    else:               self.attrs[attr] = value
+    self.attrs[attr] = value
 
 @dataclass
 class ParserState:
@@ -154,7 +156,13 @@ class Parser:
       if self.parse() is None:
         break
 
-  def cmdToken(self):
+  def cmdToken(self, alnum=False):
+    """Get a token inside of command blocks.
+
+    - This is normally a string without whitespace: 'foo-bar'
+    - TODO: It can also @get a value
+    - TODO: It can also be `foo bar` or [#]foo bar[#]
+    """
     token = []
     while self.notEof():
       c = self.buf[self.i]
@@ -165,6 +173,9 @@ class Parser:
           token.append(c)
           break
       if c <= ' ' or c in TOKEN_SPECIAL:
+        self.i -= 1
+        break
+      if alnum and not RE_ALNUM.match(c):
         self.i -= 1
         break
       token.append(c)
@@ -194,12 +205,16 @@ class Parser:
       t = self.cmdToken()
       if t == ']': break
       if t == '=':
+        self.checkEof(self.notEof(), '=')
+        if self.buf[self.i] == '@':
+          self.i += 1; tAttrs = TGet
+        else:          tAttrs = TAttrs(0)
         value = self.cmdToken()
         self.checkCmdToken(value)
-        cmd.updateAttr(name, value)
+        cmd.updateAttr(name, text(value, tAttrs))
         name = None  # get a new token for next name
       else:
-        cmd.updateAttr(name, True)
+        cmd.updateAttr(name, None)
         name = t     # reuse t as next name
     return cmd
 
@@ -212,7 +227,9 @@ class Parser:
     if cmd.name == '`': end = '`'
     else:                end = '[' + cmd.name + ']'
     code = tx(self.until(end))
-    self.s.out.append(text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs))
+    t = text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs)
+    self.s.out.append(t)
+    if 'set' in t.attrs: return NOT_PG
 
   def parseChng(self, cmd):
     self.handleBody()
@@ -220,6 +237,11 @@ class Parser:
     elif cmd.name == 'i': self.s.tAttrs.tog_i()
     elif cmd.name == 'u': self.s.tAttrs.tog_u()
     elif cmd.name == '~': self.s.tAttrs.tog_strike()
+
+  def parseGet(self, cmd):
+    self.handleBody()
+    name = self.cmdToken(alnum=True)
+    self.s.out.append(text(name, TGet))
 
   def parseText(self, cmd):
     attrs = dict(self.s.attrs)
@@ -229,16 +251,20 @@ class Parser:
       tAttrs=cmd.tAttrs,
       attrs={}))
     self.parse()
-    prevS.out.append(Cont(self.s.out, CText, attrs))
+    t = Cont(self.s.out, CText, attrs)
+    prevS.out.append(t)
     self.unrecurse(prevS)
+    if 'set' in t.attrs: return NOT_PG
 
   def parseRef(self, cmd):
     self.handleBody()
     ref = tx(self.until('[/]'))
     a = dict(self.s.attrs)
     a.update(cmd.attrs)
-    a['r'] = ref
-    self.s.out.append(Cont([text(ref)], CText, a))
+    a['r'] = text(ref)
+    c = Cont([text(ref)], CText, a)
+    self.s.out.append(c)
+    if 'set' in c.attrs: return NOT_PG
 
   def parseQuote(self, cmd):
     prevS = self.recurse(ParserState(
@@ -308,7 +334,7 @@ class Parser:
     elif token == '[X]': c.set_chk()
     elif '0' <= token[0] <= '9':
       c.set_num()
-      attrs['value'] = token
+      attrs['value'] = text(token)
     else: assert False, f"unreachable: {token}"
 
     l.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
@@ -341,16 +367,17 @@ class Parser:
 
   def doCmd(self, cmd: Cmd) -> Pg:
     if not cmd.name: return  # ignore []
-    elif isCode(cmd.name): self.parseCode(cmd)
-    elif cmd.name == 't': self.parseText(cmd)
+    elif isCode(cmd.name): return self.parseCode(cmd)
+    elif cmd.name == 't':  return self.parseText(cmd)
     elif isChng(cmd.name): self.parseChng(cmd)
-    elif cmd.name == '+': self.parseList(cmd); return NOT_PG
-    elif cmd.name == '"': self.parseQuote(cmd); return NOT_PG
+    elif cmd.name == '+':  self.parseList(cmd);  return NOT_PG
+    elif cmd.name == '"':  self.parseQuote(cmd); return NOT_PG
     elif isHdr(cmd.name):  self.parseHdr(cmd);  return NOT_PG
-    elif cmd.name == 'n': self.body.append('\n')
-    elif cmd.name == 's': self.body.append(' ')
-    elif cmd.name == '`': self.body.append('`')
-    elif cmd.name == 'r': self.parseRef(cmd)
+    elif cmd.name == 'r':  return self.parseRef(cmd)
+    elif cmd.name == 'n':  self.body.append('\n')
+    elif cmd.name == 's':  self.body.append(' ')
+    elif cmd.name == '`':  self.body.append('`')
+    elif cmd.name == '@':  self.body.append('@')
     else: self.error(f"Unknown cmd: {cmd}")
 
   def parseCloseBracket(self):
@@ -381,7 +408,8 @@ class Parser:
         if c == ' ': continue # skip spaces
         self.body.append(' ')
       pg = IN_PG
-      if c == '`': self.parseCode(self.newCmd('`'))
+      if   c == '`': self.parseCode(self.newCmd('`'))
+      elif c == '@': self.parseGet(self.newCmd('@'))
       elif c == '[':
         cmd = self.parseCmd()
         if cmd.name == '/':
@@ -417,11 +445,12 @@ def htmlCode(start, end, el):
 def htmlRef(start, end, el):
   ref = el.attrs.get('r')
   if ref:
-    start.append(f'<a href="{ref}">')
+    start.append(f'<a href="{ref.body}">')
     end.append('</a>')
 
 def htmlText(t: Text) -> str:
   a = t.tAttrs
+  if a.is_get() or a.is_hide(): return ''
   start = []
 
   end = []
@@ -467,13 +496,14 @@ def htmlList(cont: Cont):
   for li in cont.arr:
     if liIsOrdered(li.cAttrs) != ordered:
       raise ValueError(f"change in ordering: {li}")
-    if ordered: ls = f'<li value="{li.attrs["value"]}"'
+    if ordered: ls = f'<li value="{li.attrs["value"].body}"'
     else:       ls = f'<li'
     out.append(ls + _htmlCont(li) + '</li>')
   return start + tx(out) + end
 
 def htmlCont(cont: Cont) -> str:
   c = cont.cAttrs
+  if c.is_hide() or 'set' in cont.attrs: return ''
   if c.is_t() : return '<span' + _htmlCont(cont) + '</span>'
   if c.is_h1(): return '<h1'  + _htmlCont(cont) + '</h1>'
   if c.is_h2(): return '<h2'  + _htmlCont(cont) + '</h2>'
@@ -481,14 +511,55 @@ def htmlCont(cont: Cont) -> str:
   if c.is_list(): return htmlList(cont)
   if c.is_quote(): return '<blockquote' + _htmlCont(cont) + '</blockquote>'
 
-# TODO: not properly html-itizing text, leading to weird code blocks (among
-# other issues)
+def htmlVars(els, vars=None):
+  if vars is None: vars = {}
+  for el in els:
+    name = el.attrs.get('set')
+    if name is not None:
+      name = name.body
+      if name in vars:
+        raise ValueError(f"{name} is set more than once")
+      el = copy.deepcopy(el)
+      el.attrs.pop('set')
+      vars[name] = el
+    if isinstance(el, Cont): htmlVars(el.arr)
+  return vars
+
+def replaceVar(vars, el, requireStr=False, name=None):
+  if requireStr and not isinstance(el, Text):
+    raise ValueError(f"vars used as attr must be Text type: {name}")
+
+  if isinstance(el, Text) and el.tAttrs.is_get():
+    var = vars[el.body]
+    if requireStr:
+      if isinstance(var, Cont):
+        if len(var.arr) != 1 or not isinstance(var.arr[0], Text):
+          raise ValueError(f"vars used as attr must have single Text item: {name}")
+      var = copy.deepcopy(var.arr[0])
+    else: var = copy.deepcopy(var)
+    el = var
+  return el
+
+def htmlReplace(els, vars):
+  for i, el in enumerate(els):
+    els[i] = replaceVar(vars, el)
+
+    for aname, attr in el.attrs.items():
+      el.attrs[aname] = replaceVar(vars, attr, requireStr=True, name=aname)
+
+    if isinstance(el, Cont):
+      htmlReplace(el.arr, vars)
+
 def html(els: list[El]):
+  vars = htmlVars(els)
+  htmlReplace(els, vars)
+
   out = []
   for el in els:
     if isinstance(el, Text):   out.append(htmlText(el))
     elif isinstance(el, Cont): out.append(htmlCont(el))
     else: raise TypeError(el)
+
   return out
 
 
@@ -509,7 +580,6 @@ def cxtHtml(pth):
 def main(args):
   h = cxtHtml(args.path)
   end = []
-  print("Length:", len(h))
   with open(args.export, 'w') as f:
     if args.export.endswith('.html'):
       f.write('<!DOCTYPE html>\n<html><body>\n')

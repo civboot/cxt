@@ -38,7 +38,8 @@ class TestParser(unittest.TestCase):
     assert cmd.name == 'cmd'
     assert cmd.tAttrs == TAttrs(0)
     assert cmd.cAttrs == CAttrs(0)
-    assert cmd.attrs == {'a': True, 'foo': 'bar'}
+    # FIXME: text(True)
+    assert cmd.attrs == {'a': None, 'foo': text('bar')}
 
   def testParseLine(self):
     p = Parser('  some text here\nand here\n\n')
@@ -84,23 +85,37 @@ class TestParser(unittest.TestCase):
     assert o[0] == text('plain ')
     assert o[1] == text('some code', ACode)
     assert o[2] == text(' plain again ')
-    assert o[3] == text('more code', ACode, odict({'a': 'foo'}))
+    assert o[3] == text('more code', ACode, odict({'a': text('foo')}))
     assert p.body == []
+
+  def testGet(self):
+    o = parse('get @that variable')
+    assert len(o) == 3
+    assert o[0] == text('get ')
+    assert o[1] == text('that', TGet)
+    assert o[2] == text(' variable')
+
+  def testGetAttr(self):
+    o = parse('[t ref=@attr]some text[/]')
+    assert len(o) == 1
+    attrs = {'ref': text('attr', TGet)}
+    expected = Cont([text('some text')], CText, attrs)
+    assert o[0] == expected
 
   def testTextBlock(self):
     p = Parser('plain [b]bold [t a=foo]foo[/]\nmore bold[b] some plain')
     o = p.parse(); assert len(o) == 5
     assert o[0] == text('plain ')
     assert o[1] == text('bold ', ABold)
-    assert o[2] == Cont([text('foo', ABold)], CText, {'a': 'foo'})
+    assert o[2] == Cont([text('foo', ABold)], CText, {'a': text('foo')})
     assert o[3] == text(' more bold', ABold)
     assert o[4] == text(' some plain')
 
   def testRef(self):
     o = parse('[r]reference[/][t r=tref]text[/]'); assert len(o) == 2
-    expected = Cont([text('reference')], CText, {'r': 'reference'})
+    expected = Cont([text('reference')], CText, {'r': text('reference')})
     assert o[0] == expected
-    expected = Cont([text('text')], CText, {'r': 'tref'})
+    expected = Cont([text('text')], CText, {'r': text('tref')})
     assert o[1] == expected
 
   def testList(self):
@@ -180,6 +195,30 @@ class TestHtml(unittest.TestCase):
     result = ''.join(html(o))
     expected = 'code block: <pre>\nA code\nblock\n</pre>'
     assert expected == result
+
+  def testSetGet(self):
+    o = parse('[r set=goo]http://google.com[/]\n\nSearch at @goo.')
+    result = ''.join(html(o))
+    expected = (
+      'Search at <span>'
+        '<a href="http://google.com">http://google.com</a>'
+      '</span>.'
+    )
+    assert expected == result
+
+  def testGetAttr(self):
+    o = parse(
+        '[r set=url]http://google.com[/]\n'
+        '[r set=foo]not rendered[/]\n\n'
+        'You can find out at [t r=@url]the url[/].')
+    result = ''.join(html(o))
+    expected = (
+      'You can find out at <span>'
+        '<a href="http://google.com">the url</a>'
+      '</span>.'
+    )
+    assert expected == result
+
 
 if __name__ == '__main__':
   unittest.main()

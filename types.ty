@@ -1,13 +1,15 @@
 declare El;
 
 bitmap TAttrs [
-  code     0x010      \ code
-  i        0x020      \ italic
-  b        0x040      \ bold
-  u        0x080      \ underline
-  strike   0x100      \ '~' strikethrough
+  get      0x001  0x0F
 
-  hide    0x8000      \ '!'
+  code     0x010  \ code
+  i        0x020  \ italic
+  b        0x040  \ bold
+  u        0x080  \ underline
+  strike   0x100  \ '~' strikethrough
+
+  hide    0x8000  \ '!'
 ]
 
 bitmap CAttrs [
