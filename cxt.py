@@ -204,6 +204,10 @@ class Parser:
     while True:
       if not name:     name = self.cmdToken()
       if name == ']': break
+      if name == '!':
+          self.tAttrs.set_hide()
+          self.cAttrs.set_hide()
+          continue
       self.checkCmdToken(name)
 
       t = self.cmdToken()
@@ -324,7 +328,7 @@ class Parser:
       c = self.buf[self.i]; self.i += 1
       if c == ' ': pass  # skip spaces
       elif c == '*':        return '*'
-      elif '0' <= c <= '9': return numToken([c])
+      elif '0' <= c <= '9': return self.listNum(c)
       elif c == '[':        return self.listBox()
       else: self.i -= 1; return ''
 
@@ -477,7 +481,7 @@ def htmlText(t: Text) -> str:
     text = '<p>'.join(pyHtml.escape(i) for i in t.body.split('\n'))
   return tx(start) + text + tx(end)
 
-def _htmlCont(cont: Cont):
+def _htmlCont(cont: Cont, endStart=None):
   start = []; end = []
   htmlRef(start, end, cont)
   out = []
@@ -485,6 +489,7 @@ def _htmlCont(cont: Cont):
     if isinstance(el, Text): out.append(htmlText(el))
     else                   : out.append(htmlCont(el))
 
+  if endStart: start.extend(endStart)
   return '>' + tx(start) + tx(out) + tx(end)
 
 def liIsOrdered(c: CAttrs):
@@ -506,7 +511,10 @@ def htmlList(cont: Cont):
       raise ValueError(f"change in ordering: {li}")
     if ordered: ls = f'<li value="{li.attrs["value"].body}"'
     else:       ls = f'<li'
-    out.append(ls + _htmlCont(li) + '</li>')
+    endStart = []
+    if li.cAttrs.is_chk():     endStart.append('✅ ')
+    elif li.cAttrs.is_nochk(): endStart.append('🔲 ')
+    out.append(ls + _htmlCont(li, endStart) + '</li>')
   return start + tx(out) + end
 
 def htmlCont(cont: Cont) -> str:

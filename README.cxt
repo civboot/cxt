@@ -19,15 +19,15 @@ a `.ct` file, parsing it and exporting it into a structed data format (aka json)
 and injesting that to generate code for the args structure of a program.
 
 [b]This repository is WIP[b]. Current progress:[+]
-  * `[X]` parsing text
-  * `[X]` parsing code
-  * `[X]` parsing lists
-  * `[X]` export above to html or markdown-embedded html
-  * `[X]` quotes (markdown `>`)
-  * `[X]` set/get "variables"
-  * `[ ]` comments (`!`)
-  * `[ ]` checkboxes
-  * `[ ]` parsing tables
+  [X] parsing text
+  [X] parsing code
+  [X] parsing lists
+  [X] export above to html or markdown-embedded html
+  [X] quotes (markdown `>`)
+  [X] set/get "variables"
+  [X] checkboxes
+  [ ] comments (`!`)
+  [ ] parsing tables
 [/]
 
 ["] [b]Note:[b] "cxt" is pronounced as either "[i]C-X-T[i]" or "[i]text[i]"
@@ -106,19 +106,20 @@ i.e. [t r=@civbootUrl]check out civboot![/]
 
 [b]Numbered Lists:[b]
 
-TODO: fix numbered lists
-
 [###]
 [+]
  1. first item
  2. second item
+ 4. fourth item?
 [/]
+[###]
 
 [+]
  1. first item
  2. second item
+ 4. fourth item?
 [/]
-[###]
+
 
 [b]Sub Lists:[b]
 

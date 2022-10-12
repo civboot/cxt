@@ -12,7 +12,7 @@ cxt enables (for example) writing a command line utility&#x27;s documentation as
  file, parsing it and exporting it into a structed data format (aka json) and injesting that to generate code for the args structure of a program.<p>
 <b>This repository is WIP</b>
 . Current progress:
-<ul><li><code>[X]</code> parsing text</li><li><code>[X]</code> parsing code</li><li><code>[X]</code> parsing lists</li><li><code>[X]</code> export above to html or markdown-embedded html</li><li><code>[X]</code> quotes (markdown <code>&gt;</code>)</li><li><code>[X]</code> set/get &quot;variables&quot;</li><li><code>[ ]</code> comments (<code>!</code>)</li><li><code>[ ]</code> checkboxes</li><li><code>[ ]</code> parsing tables</li></ul>
+<ul><li>✅ parsing text</li><li>✅ parsing code</li><li>✅ parsing lists</li><li>✅ export above to html or markdown-embedded html</li><li>✅ quotes (markdown <code>&gt;</code>)</li><li>✅ set/get &quot;variables&quot;</li><li>✅ checkboxes</li><li>🔲 comments (<code>!</code>)</li><li>🔲 parsing tables</li></ul>
 <blockquote> <b>Note:</b> &quot;cxt&quot; is pronounced as either &quot;<i>C-X-T</i>&quot; or &quot;<i>text</i>&quot; with a &#x27;c&#x27;, at your discression. </blockquote>
 
 
@@ -56,9 +56,10 @@ cxt enables (for example) writing a command line utility&#x27;s documentation as
 <pre>[+]<br> * bullet point<br> * second bullet point<br>[/]<br></pre>
 <p>
 <b>Numbered Lists:</b>
-<p>TODO: fix numbered lists<p>
-<pre>[+]<br> 1. first item<br> 2. second item<br>[/]<br><br>[+]<br> 1. first item<br> 2. second item<br>[/]<br></pre>
 <p>
+<pre>[+]<br> 1. first item<br> 2. second item<br> 4. fourth item?<br>[/]<br></pre>
+<p>
+<ol><li value="1">first item</li><li value="2">second item</li><li value="4">fourth item?</li></ol>
 <b>Sub Lists:</b>
 <p>
 <pre>[+]<br> * Bullet point [+]<br>   * Sub bullet point<br> [/]<br> * Second bullet point<br>[/]<br></pre>

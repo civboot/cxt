@@ -132,11 +132,10 @@ class TestParser(unittest.TestCase):
 
   def testNumList(self):
     o = parse('[+]\n  1. hi\n  2. holla\n  3. hallo\n[/]')
-    assert len(o) == 1
-    a = o[0].arr
-    assert len(a) == 3
-    assert a[0] == li([text('hi')])
-    assert a[1] == li([text('holla')])
+    assert len(o) == 1; a = o[0].arr; assert len(a) == 3
+    assert a[0] == li( [text('hi')],    CNum, attrs={'value': text('1')} )
+    assert a[1] == li( [text('holla')], CNum, attrs={'value': text('2')} )
+    assert a[2] == li( [text('hallo')], CNum, attrs={'value': text('3')} )
 
   def testQuote(self):
     o = parse('''["]This is a quote[/]''')
@@ -164,7 +163,6 @@ class TestParser(unittest.TestCase):
 
   def testLiterals(self):
     o = parse('[] [`] [[ ]] [\n][@]foo')
-    print(o)
     assert len(o) == 1
     assert o[0] == text(' ` [ ] @foo')
 
@@ -198,6 +196,21 @@ class TestHtml(unittest.TestCase):
     expected = '<ul><li>item1</li><li>item2</li></ul>'
     assert expected == result
 
+  def testListNum(self):
+    o = parse('''[+]
+    1. item1
+    2. item2[/]''')
+    result = ''.join(html(o))
+    expected = '<ol><li value="1">item1</li><li value="2">item2</li></ol>'
+    assert expected == result
+
+  def testCheckbox(self):
+    o = parse('''[+]
+    [X] item1
+    [ ] item2[/]''')
+    result = ''.join(html(o))
+    expected = '<ul><li>✅ item1</li><li>✅ item2</li></ul>'
+
   def testQuote(self):
     o = parse('''["]This is a [b]quote[b][/]''')
     result = ''.join(html(o))
@@ -207,7 +220,7 @@ class TestHtml(unittest.TestCase):
   def testBlock(self):
     o = parse('code block:\n[###]\nA code\nblock\n[###]\n')
     result = ''.join(html(o))
-    expected = 'code block: <pre>\nA code\nblock\n</pre>'
+    expected = 'code block: <pre>A code<br>block<br></pre>'
     assert expected == result
 
   def testSetGet(self):
