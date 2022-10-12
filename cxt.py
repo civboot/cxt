@@ -142,7 +142,7 @@ class Parser:
     out = []
     i = 0
     while i < len(b):
-      if self.i >= len(self.buf): self.eof(b)
+      self.checkEof(self.notEof(), b)
       c = self.buf[self.i]
       if b[i] == c: i += 1;
       else:         i = 0;
