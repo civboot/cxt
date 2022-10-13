@@ -6,6 +6,8 @@ cxt is part of the civboot.org project and is released to the public domain
 or licensed MIT under your discression.
 
 Copy and modify this file in any way you wish. Contributions are welcome.
+
+Version: 0.0.1
 """
 
 import copy
