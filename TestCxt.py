@@ -173,6 +173,12 @@ class TestParser(unittest.TestCase):
     assert o[0] == Cont([text("hidden")], CHide, {})
     assert o[1] == text('Some text')
 
+  def testComment(self):
+    o = parse('[!]comment[/]not comment')
+    assert len(o) == 2
+    assert o[0] == Cont([text('comment')], CHide, {})
+    assert o[1] == text('not comment')
+
 class TestHtml(unittest.TestCase):
   def testText(self):
     p = Parser('plain `some code` [b]bold[b] plain [## a=foo]more code[##]')
@@ -186,7 +192,6 @@ class TestHtml(unittest.TestCase):
     result = ''.join(html(o))
     expected = 'a url: <span><a href="http://foo.txt">http://foo.txt</a></span>'
     assert expected == result
-
     o = parse('[r]reference[/]') # [t r=tref]text[/]')
 
   def testH1(self):

@@ -1,7 +1,11 @@
-"""cxt python module.
+"""cxt single file library and cmdline tool (https://github.com/civboot/cxt).
 
-Parses a `.cxt` file into python objects and provides mechanisms to export as
-HTML and view in the terminal.
+Parses a `.cxt` documentation file into html or "markdown" (html in a .md file)
+
+cxt is part of the civboot.org project and is released to the public domain
+or licensed MIT under your discression.
+
+Copy and modify this file in any way you wish. Contributions are welcome.
 """
 
 import copy
@@ -45,6 +49,7 @@ CH1    = CAttrs(0); CH1.set_h1()
 CH2    = CAttrs(0); CH2.set_h2()
 CH3    = CAttrs(0); CH3.set_h3()
 CQuote = CAttrs(0); CQuote.set_quote()
+CHide  = CAttrs(0); CHide.set_hide()
 
 def isCode(name): return RE_CODE.match(name)
 def isHdr(name):  return RE_H.match(name)
@@ -229,15 +234,28 @@ class Parser:
   ####################
   # Element Parsers
 
+  def parseCont(self, cmd, cAttrs):
+    self.handleBody()
+    prevS = self.recurse(ParserState(
+      out=[],
+      tAttrs=self.s.tAttrs,
+      attrs=self.s.attrs))
+    self.untilClose()
+    attrs = dict(self.s.attrs); attrs.update(cmd.attrs)
+    cAttrs = CAttrs(cAttrs.value)
+    if cmd.cAttrs.is_hide(): cAttrs.set_hide()
+    prevS.out.append(Cont(arr=self.s.out, cAttrs=cAttrs, attrs=attrs))
+    self.unrecurse(prevS)
+
   def parseCode(self, cmd):
     self.handleBody()
     cmd.tAttrs.set_code()
     if cmd.name == '`': end = '`'
-    else:                end = '[' + cmd.name + ']'
+    else:               end = '[' + cmd.name + ']'
     code = tx(self.until(end))
     t = text(body=code, tAttrs=cmd.tAttrs, attrs=cmd.attrs)
     self.s.out.append(t)
-    if 'set' in t.attrs: return NOT_PG
+    if 'set' in t.attrs or '\n' in t.body: return NOT_PG
 
   def parseChng(self, cmd):
     self.handleBody()
@@ -252,18 +270,8 @@ class Parser:
     self.s.out.append(text(name, TGet))
 
   def parseText(self, cmd):
-    attrs = dict(self.s.attrs)
-    attrs.update(cmd.attrs)
-    prevS = self.recurse(ParserState(
-      out=[],
-      tAttrs=cmd.tAttrs,
-      attrs={}))
-    self.parse()
-    cmd.cAttrs.set_t()
-    t = Cont(self.s.out, cmd.cAttrs, attrs)
-    prevS.out.append(t)
-    self.unrecurse(prevS)
-    if 'set' in t.attrs: return NOT_PG
+    self.parseCont(cmd, CText)
+    if 'set' in cmd.attrs: return NOT_PG
 
   def parseRef(self, cmd):
     self.handleBody()
@@ -275,29 +283,12 @@ class Parser:
     self.s.out.append(c)
     if 'set' in c.attrs: return NOT_PG
 
-  def parseQuote(self, cmd):
-    prevS = self.recurse(ParserState(
-      out=[],
-      tAttrs=self.s.tAttrs,
-      attrs=self.s.attrs))
-    self.untilClose()
-    attrs = dict(self.s.attrs); attrs.update(cmd.attrs)
-    prevS.out.append(Cont(arr=self.s.out, cAttrs=CQuote, attrs=attrs))
-    self.unrecurse(prevS)
-
   def parseHdr(self, cmd):
     if   cmd.name == 'h1': c = CH1
     elif cmd.name == 'h2': c = CH2
     elif cmd.name == 'h3': c = CH3
     else: self.error(f"Unknown header: {cmd.name}")
-    prevS = self.recurse(ParserState(
-      out=[],
-      tAttrs=self.s.tAttrs,
-      attrs=self.s.attrs))
-    self.untilClose()
-    attrs = dict(self.s.attrs); attrs.update(cmd.attrs)
-    prevS.out.append(Cont(arr=self.s.out, cAttrs=c, attrs=attrs))
-    self.unrecurse(prevS)
+    self.parseCont(cmd, c)
 
   ####################
   # List
@@ -377,11 +368,12 @@ class Parser:
   def doCmd(self, cmd: Cmd) -> Pg:
     if not cmd.name: return  # ignore []
     elif isCode(cmd.name): return self.parseCode(cmd)
+    elif cmd.name == '!':  self.parseCont(cmd, CHide)
     elif cmd.name == 't':  return self.parseText(cmd)
     elif isChng(cmd.name): self.parseChng(cmd)
-    elif cmd.name == '+':  self.parseList(cmd);  return NOT_PG
-    elif cmd.name == '"':  self.parseQuote(cmd); return NOT_PG
-    elif isHdr(cmd.name):  self.parseHdr(cmd);  return NOT_PG
+    elif cmd.name == '+':  self.parseList(cmd);         return NOT_PG
+    elif cmd.name == '"':  self.parseCont(cmd, CQuote); return NOT_PG
+    elif isHdr(cmd.name):  self.parseHdr(cmd);          return NOT_PG
     elif cmd.name == 'r':  return self.parseRef(cmd)
     elif cmd.name == 'n':  self.body.append('\n')
     elif cmd.name == 's':  self.body.append(' ')

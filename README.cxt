@@ -1,3 +1,4 @@
+[!]##########################################################################[/]
 [h1]cxt: text markup for civilization[/]
 
 ["][b]Note:[b] This file is created using cxt. To see the source view
@@ -6,9 +7,9 @@
 It should not take more than a few minutes to know how to read and write
 documentation.
 
-cxt is an ultra-simple markup language similar in spirit @BBCode, designed
-to be as easy as possible to parse (for computers _and_ humans) while delivering
-any features necessary to the @CivBoot project.
+cxt is an ultra-simple markup language similar in spirit to @BBCode, designed
+to be as easy as possible to parse (for computers [i]and[i] humans) while
+delivering any features necessary to the @CivBoot project.
 
 cxt is designed to:[+]
  * Make document writing easy.
@@ -18,10 +19,11 @@ cxt is designed to:[+]
 [/]
 
 cxt enables (for example) writing a command line utility's documentation as
-a `.ct` file, parsing it and exporting it into a structed data format (aka json)
+a `.cxt` file, parsing it and exporting it into a structed data format (aka json)
 and injesting that to generate code for the args structure of a program.
 
-[b]This repository is WIP[b]. Current progress:[+]
+This repository is almost complete. It is certainly useable for many projects.
+Current progress:[+]
   [X] parsing text
   [X] parsing code
   [X] parsing lists
@@ -31,6 +33,7 @@ and injesting that to generate code for the args structure of a program.
   [X] checkboxes
   [X] comments (`!`)
   [ ] parsing tables
+  [ ] enable export to json and @zoa
 [/]
 
 ["] [b]Note:[b] "cxt" is pronounced as either "[i]C-X-T[i]" or "[i]text[i]"
@@ -39,10 +42,10 @@ and injesting that to generate code for the args structure of a program.
 
 [t set=BBCode  r=https://en.wikipedia.org/wiki/BBCode]BBCode[/]
 [t set=CivBoot r=https://civboot.org]CivBoot[/]
+[t set=zoa r=https://github.com/civboot/zoa]zoa[/]
 
+[!]##########################[/]
 [h2]Example[/]
-
-
 [b]Inline code:[b]
 
 [###]
@@ -166,14 +169,17 @@ i.e. [t r=@civbootUrl]check out civboot![/]
 [b]Developer-only Comments[b]
 
 [###]
-The following comment is not rendered...
-[t !]Any block with a ! attr is a comment.[/]
+The following comments are not rendered...
+[!]This is a comment[/]
+[t !]In fact, any block with a ! attr is a comment.[/]
 [###]
 
 The following comment is not rendered...
-[t !]Any block with a ! attr is a comment.[/]
+[!]This is a comment[/]
+[t !]In fact, any block with a ! attr is a comment.[/]
 
 
+[!]##########################[/]
 [h2]Special Character Escapes[/]
 
 [###]
@@ -207,6 +213,7 @@ This is useful for very-very-very-very-very-[
 (notice: no spaces before last "very")
 
 
+[!]##########################[/]
 [h2]Table (not yet implemented)[/]
 
 [###]
@@ -225,6 +232,7 @@ This is useful for very-very-very-very-very-[
   force it, you can use `[t] my cell value [/]`
 [/]
 
+[!]##########################[/]
 [h2]Full List of Brackets[/]
 
 Special characters
@@ -274,7 +282,10 @@ Attributes are added in `attr=foo` form:[+]
    for code, etc)
 [/]
 
+[!]##########################[/]
 [h2]Contributing[/]
+
+To build the README.md and run the tests, simply run `make`.
 
 When opening a PR to submit code to this repository you must include the
 following disclaimer in your first commit message:
@@ -285,6 +296,7 @@ under the dual licenses of the UNLICENSE or MIT license listed in the
 `UNLICENSE` and `README.md` files of this repository.
 [###]
 
+[!]##########################[/]
 [h2]LICENSING[/]
 
 This work is part of the Civboot project and therefore primarily exists for
