@@ -21,9 +21,58 @@ import zoa
 from zoa import BaseParser
 from zoa import MapStrStr
 
-PWD = os.path.dirname(__file__)
-with open(os.path.join(PWD, 'types.ty'), 'rb') as f:
-  zparser = zoa.Parser(f.read())
+TYPES = b"""
+declare El;
+
+bitmap TAttrs [
+  get      0x001  0x0F
+
+  code     0x010  \ code
+  i        0x020  \ italic
+  b        0x040  \ bold
+  u        0x080  \ underline
+  strike   0x100  \ '~' strikethrough
+]
+
+bitmap CAttrs [
+  t         0x00    0x0F
+  h1        0x01    0x0F
+  h2        0x02    0x0F
+  h3        0x03    0x0F
+  list      0x04    0x0F
+  table     0x06    0x0F
+  tHead     0x07    0x0F
+  tCol      0x08    0x0F
+  quote     0x09    0x0F
+
+  \ List Items
+  star      0x10    0x70  \ '*'
+  num       0x20    0x70  \ '1.'
+  nochk     0x30    0x70  \ '[ ]'
+  chk       0x40    0x70  \ '[X]'
+
+  hide    0x8000      \ '!'
+]
+
+struct Text [
+  body:   Str
+  tAttrs: TAttrs
+  attrs:  MapStrStr
+]
+
+struct Cont [ \ Container
+  arr:    Arr[El]
+  cAttrs: CAttrs
+  attrs:  MapStrStr
+]
+
+enum El [
+  text: Text
+  cont: Cont
+]
+"""
+
+zparser = zoa.Parser(TYPES)
 zparser.parse()
 tys = zparser.env.tys
 
