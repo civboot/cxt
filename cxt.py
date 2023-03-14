@@ -522,7 +522,7 @@ def htmlText(t: Text) -> str:
     if text[0] == '\n': text = text[1:]
     text = '<br>'.join(text.split('\n'))
   else:
-    text = '<p>'.join(pyHtml.escape(i) for i in t.body.split('\n'))
+    text = '</p><p>'.join(pyHtml.escape(i) for i in t.body.split('\n'))
   return tx(start) + text + tx(end)
 
 def _htmlCont(cont: Cont, endStart=None):
@@ -642,8 +642,8 @@ def main(args):
   end = []
   with open(args.export, 'w') as f:
     if args.export.endswith('.html'):
-      f.write('<!DOCTYPE html>\n<html><body>\n')
-      end.append('</body></html>\n')
+      f.write('<!DOCTYPE html>\n<html><body><p>\n')
+      end.append('</p></body></html>\n')
     elif args.export.endswith('.md'):
       f.write('<div>\n'); end.append('</div>')
     else: syserror(f"Unknown file type. Supported are: .html, .md")

@@ -4,17 +4,17 @@
  
 <h1>cxt: text markup for civilization</h1>
 <blockquote><b>Note:</b> This file is created using cxt. To see the source view README.cxt in this directory.</blockquote>
-It should not take more than a few minutes to know how to read and write documentation.<p>cxt is an ultra-simple markup language similar in spirit to 
+It should not take more than a few minutes to know how to read and write documentation.</p><p>cxt is an ultra-simple markup language similar in spirit to 
 <span><a href="https://en.wikipedia.org/wiki/BBCode">BBCode</a></span>
 , designed to be as easy as possible to parse (for computers 
 <i>and</i>
  humans) while delivering any features necessary to the 
 <span><a href="https://civboot.org">CivBoot</a></span>
- project.<p>cxt is designed to:
+ project.</p><p>cxt is designed to:
 <ul><li>Make document writing easy.</li><li>Make document parsing easy.</li><li>Make reading of raw (text) documents easy.</li><li>Make consuming structured data from documents easy.</li></ul>
 cxt enables (for example) writing a command line utility&#x27;s documentation as a 
 <code>.cxt</code>
- file, parsing it and exporting it into a structed data format (aka json) and injesting that to generate code for the args structure of a program.<p>This repository is almost complete. It is certainly useable for many projects. Current progress:
+ file, parsing it and exporting it into a structed data format (aka json) and injesting that to generate code for the args structure of a program.</p><p>This repository is almost complete. It is certainly useable for many projects. Current progress:
 <ul><li>✅ parsing text</li><li>✅ parsing code</li><li>✅ parsing lists</li><li>✅ export above to html or markdown-embedded html</li><li>✅ quotes (markdown <code>&gt;</code>)</li><li>✅ set/get &quot;variables&quot;</li><li>✅ checkboxes</li><li>✅ comments (<code>!</code>)</li><li>🔲 parsing tables</li><li>🔲 enable export to json and <span><a href="https://github.com/civboot/zoa">zoa</a></span></li></ul>
 <blockquote> <b>Note:</b> &quot;cxt&quot; is pronounced as either &quot;<i>C-X-T</i>&quot; or &quot;<i>text</i>&quot; with a &#x27;c&#x27;, at your discression. </blockquote>
 
@@ -24,15 +24,15 @@ cxt enables (for example) writing a command line utility&#x27;s documentation as
  
 <h2>Example</h2>
 <b>Inline code:</b>
-<p>
+</p><p>
 <pre>Some `inline code`, more [#]inline code[#].<br></pre>
 Some 
 <code>inline code</code>
 , more 
 <code>inline code</code>
-.<p>
+.</p><p>
 <b>Formatting:</b>
-<p>
+</p><p>
 <pre>This sentance has [b]bold[b] text, [i]italic[i] text, and<br>[b][i]bold italic[i][b] text.<br></pre>
 This sentance has 
 <b>bold</b>
@@ -40,53 +40,53 @@ This sentance has
 <i>italic</i>
  text, and 
 <b><i>bold italic</b></i>
- text.<p>
+ text.</p><p>
 <b>Linking:</b>
-<p>
+</p><p>
 <pre>A url to [t r=http://civboot.org]CivBoot[/],<br>or displaying and linking the full url:<br>[r]http://civboot.org[/]<br><br>Alternatively, you can use set/get: @CivBoot<br><br>You can even use [@] for attributes like `r` (ref),<br>i.e. [t r=@civbootUrl]check out civboot![/]<br><br>[t set=CivBoot r=https://civboot.org]CivBoot[/]<br>[r set=civbootUrl]http://civboot.org[/]<br></pre>
 A url to 
 <span><a href="http://civboot.org">CivBoot</a></span>
 , or displaying and linking the full url: 
 <span><a href="http://civboot.org">http://civboot.org</a></span>
-<p>Alternatively, you can use set/get: 
+</p><p>Alternatively, you can use set/get: 
 <span><a href="https://civboot.org">CivBoot</a></span>
-<p>You can even use @ for attributes like 
+</p><p>You can even use @ for attributes like 
 <code>r</code>
  (ref), i.e. 
 <span><a href="http://civboot.org">check out civboot!</a></span>
-<p>
+</p><p>
 
 <b>Lists:</b>
-<p>
+</p><p>
 <ul><li>bullet point</li><li>second bullet point</li></ul>
 <pre>[+]<br> * bullet point<br> * second bullet point<br>[/]<br></pre>
 <b>Numbered Lists:</b>
-<p>
+</p><p>
 <pre>[+]<br> 1. first item<br> 2. second item<br> 4. fourth item?<br>[/]<br></pre>
 <ol><li value="1">first item</li><li value="2">second item</li><li value="4">fourth item?</li></ol>
 <b>Sub Lists:</b>
-<p>
+</p><p>
 <pre>[+]<br> * Bullet point [+]<br>   * Sub bullet point<br> [/]<br> * Second bullet point<br>[/]<br></pre>
 <ul><li>Bullet point <ul><li>Sub bullet point</li></ul></li><li>Second bullet point</li></ul>
 <b>Checkboxes:</b>
-<p>
+</p><p>
 <pre>[+]<br> [X] done item<br> [ ] undone item [+]<br>   [X] indented done item<br>   [ ] indented undone item<br> [/]<br>[/]<br></pre>
 <ul><li>✅ done item</li><li>🔲 undone item <ul><li>✅ indended done item</li><li>🔲 indended undone item</li></ul></li></ul>
 <b>Developer-only Comments</b>
-<p>
+</p><p>
 <pre>The following comments are not rendered...<br>[!]This is a comment[/]<br>[t !]In fact, any block with a ! attr is a comment.[/]<br></pre>
 The following comment is not rendered... 
 
  
 
-<p>
+</p><p>
 
  
 <h2>Special Character Escapes</h2>
 <pre>This is a backtick: [`]<br><br>Doubling a bracket escapes it. [[ This is in literal brackets ]]<br><br>An empty brackets like &quot;[]&quot; does nothing.<br>[]   This is useful for leading whitespace.<br></pre>
-This is a backtick: `<p>Doubling a bracket escapes it. [ This is in literal brackets ]<p>An empty brackets like &quot;&quot; does nothing.    This is useful for leading whitespace.<p>
+This is a backtick: `</p><p>Doubling a bracket escapes it. [ This is in literal brackets ]</p><p>An empty brackets like &quot;&quot; does nothing.    This is useful for leading whitespace.</p><p>
 <pre>Empty brackets at the end of the line<br>cause it to continue.<br>This is useful for very-very-very-very-very-[<br>]very long words.<br>(notice: no spaces before last &quot;very&quot;)<br></pre>
-Empty brackets at the end of the line cause it to continue. This is useful for very-very-very-very-very-very long words. (notice: no spaces before last &quot;very&quot;)<p>
+Empty brackets at the end of the line cause it to continue. This is useful for very-very-very-very-very-very long words. (notice: no spaces before last &quot;very&quot;)</p><p>
 
  
 <h2>Table (not yet implemented)</h2>
@@ -114,11 +114,11 @@ Attributes are added in
 <h2>Contributing</h2>
 To build the README.md and run the tests, simply run 
 <code>make</code>
-.<p>When opening a PR to submit code to this repository you must include the following disclaimer in your first commit message:<p>
+.</p><p>When opening a PR to submit code to this repository you must include the following disclaimer in your first commit message:</p><p>
 <pre>I &lt;author&gt; assent to license this and all future contributions to this project<br>under the dual licenses of the UNLICENSE or MIT license listed in the<br>`UNLICENSE` and `README.md` files of this repository.<br></pre>
 
  
 <h2>LICENSING</h2>
-This work is part of the Civboot project and therefore primarily exists for educational purposes. Attribution to the authors and project is appreciated but not necessary.<p>Therefore this body of work is licensed using the UNLICENSE unless otherwise specified at the beginning of the source file.<p>If for any reason the UNLICENSE is not valid in your jurisdiction or project, this work can be singly or dual licensed at your discression with the MIT license below.<p>
+This work is part of the Civboot project and therefore primarily exists for educational purposes. Attribution to the authors and project is appreciated but not necessary.</p><p>Therefore this body of work is licensed using the UNLICENSE unless otherwise specified at the beginning of the source file.</p><p>If for any reason the UNLICENSE is not valid in your jurisdiction or project, this work can be singly or dual licensed at your discression with the MIT license below.</p><p>
 <pre>Copyright 2022 Garrett Berg<br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of<br>this software and associated documentation files (the &quot;Software&quot;), to deal in<br>the Software without restriction, including without limitation the rights to<br>use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies<br>of the Software, and to permit persons to whom the Software is furnished to do<br>so, subject to the following conditions:<br><br>The above copyright notice and this permission notice shall be included in all<br>copies or substantial portions of the Software.<br><br>THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE<br>SOFTWARE.<br></pre>
 </div>
