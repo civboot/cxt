@@ -33,8 +33,8 @@ Some
 .</p><p>
 <b>Formatting:</b>
 </p><p>
-<pre>This sentance has [b]bold[b] text, [i]italic[i] text, and<br>[b][i]bold italic[i][b] text.<br></pre>
-This sentance has 
+<pre>This sentence has [b]bold[b] text, [i]italic[i] text, and<br>[b][i]bold italic[i][b] text.<br></pre>
+This sentence has 
 <b>bold</b>
  text, 
 <i>italic</i>
